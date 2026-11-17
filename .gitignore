@@ -1,5 +1,41 @@
-# Object file
-*.o
+save();pushNow(true);render()},function(){});
+  DB.collection("gifts").onSnapshot(function(s){
+   S.got = S.got || []; S.inbox = S.inbox || []; var ch=false;
+   s.docs.forEach(function(q){
+    var d = q.data() || {};
+    if(d.to !== UID) return; // Faqat sizga yuborilganlarni tekshirish
+    if(S.got.indexOf(q.id) >= 0) return; // Allaqachon olinganlarni o'tkazib yuborish
+    if(!(+d.a > 0)) return; // Summa 0 dan katta bo'lishi kerak
+    
+    S.got.push(q.id); if(S.got.length>300) S.got.shift();
+    if(d.type === "card") { S.card = (+S.card || 0) + (+d.a); } 
+    else { S.cash = (+S.cash || 0) + (+d.a); }
+    
+    S.inbox.unshift({w:String(d.fn||"?").slice(0,16), a:+d.a});
+    S.inbox = S.inbox.slice(0,10); ch=true;
+    DB.doc("gifts/"+q.id).delete().catch(function(){});
+   });
+   if(ch){
+    save(); pushNow(true);
+    var ae = document.activeElement;
+    if(!down && !(ae && /^(INPUT|SELECT)$/.test(ae.tagName))) render();
+   }
+  },function(){});
 
-# Ada Library Information
-*.ali
+  DB.collection("admins").onSnapshot(function(s){
+   AL = s.docs.map(function(q){var x=Object.assign({},q.data()||{});x.id=q.id;return x});
+   var me = AL.filter(function(x){return x.id===UID})[0];
+   if(me && me.revoked && S.admin){S.admin=false; MSG="Admin huquqingiz olib tashlandi."; save()}
+   var ae = document.activeElement;
+   if(!down && !AD && !(ae && /^(INPUT|SELECT)$/.test(ae.tagName))) render()
+  },function(){});
+
+  regAdmin();
+  pushNow(true); setInterval(pushNow,8000); render()
+}).catch(function(){});
+
+for(var pk in S.pp) unpump(pk);
+render();
+</script>
+</body>
+</html>
