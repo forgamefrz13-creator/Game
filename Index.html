@@ -1,40 +1,327 @@
-save();pushNow(true);render()},function(){});
-  DB.collection("gifts").onSnapshot(function(s){
-   S.got = S.got || []; S.inbox = S.inbox || []; var ch=false;
-   s.docs.forEach(function(q){
-    var d = q.data() || {};
-    if(d.to !== UID) return; // Faqat sizga yuborilganlarni tekshirish
-    if(S.got.indexOf(q.id) >= 0) return; // Allaqachon olinganlarni o'tkazib yuborish
-    if(!(+d.a > 0)) return; // Summa 0 dan katta bo'lishi kerak
-    
-    S.got.push(q.id); if(S.got.length>300) S.got.shift();
-    if(d.type === "card") { S.card = (+S.card || 0) + (+d.a); } 
-    else { S.cash = (+S.cash || 0) + (+d.a); }
-    
-    S.inbox.unshift({w:String(d.fn||"?").slice(0,16), a:+d.a});
-    S.inbox = S.inbox.slice(0,10); ch=true;
-    DB.doc("gifts/"+q.id).delete().catch(function(){});
-   });
-   if(ch){
-    save(); pushNow(true);
-    var ae = document.activeElement;
-    if(!down && !(ae && /^(INPUT|SELECT)$/.test(ae.tagName))) render();
-   }
-  },function(){});
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aksiya oʻyini</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#f4f7f5;--card:#fff;--tx:#18231d;--mu:#6b7a72;--ac:#16a34a;--rd:#dc2626;--bar:#e3e9e5;--blue:#2563eb;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1511;--card:#17211b;--tx:#e8f1ec;--mu:#8fa196;--ac:#34d399;--rd:#f87171;--bar:#26332b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1511;--card:#17211b;--tx:#e8f1ec;--mu:#8fa196;--ac:#34d399;--rd:#f87171;--bar:#26332b;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{max-width:480px;margin:0 auto;padding:14px;padding-bottom:80px}
+.tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{flex:1 1 30%;padding:11px 2px;border:0;border-radius:12px;background:var(--card);color:var(--tx);font:inherit;font-weight:600;font-size:12.5px}
+.tabs button.on{background:var(--ac);color:#fff}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px}
+.card[data-open]{cursor:pointer}
+.mu{color:var(--mu);font-size:13px}
+.n{font-size:36px;font-weight:800;margin:2px 0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.up{color:var(--ac)}.dn{color:var(--rd)}
+.bt{display:flex;gap:6px;margin-top:10px}
+.bt button,.pb{flex:1;padding:10px 2px;border:0;border-radius:10px;background:var(--ac);color:#fff;font:inherit;font-weight:700;font-size:13px}
+.bt button.s{background:var(--rd)}
+.bt button:disabled{opacity:.4}
+.gift{background:var(--ac);color:#fff}
+.gift button{margin-top:8px;padding:8px 14px;border:0;border-radius:10px;background:#fff;color:#166534;font:inherit;font-weight:700}
+.rs,.bk{background:none;border:0;color:var(--mu);font:inherit;margin:4px 0 8px;padding:6px 0}
+.rs{text-decoration:underline}
+.fi{display:block;width:100%;padding:10px 12px;margin:8px 0;border-radius:10px;border:2px solid var(--bar);background:var(--bg);color:var(--tx);font:inherit}
+.msg{min-height:20px;font-size:14px;margin-top:6px}
+.ic{border-radius:50%;object-fit:cover;flex:none;display:block;box-shadow:0 2px 5px rgba(0,0,0,.1);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;border:2px solid var(--bg)}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.slot{background:var(--bar);border-radius:12px;padding:12px;text-align:center;min-height:150px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ctr{display:flex;align-items:center;gap:14px;margin-top:6px}
+.ctr button{width:34px;height:34px;border:0;border-radius:8px;background:var(--card);color:var(--tx);font:inherit;font-size:20px;font-weight:700}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cell{border:2px solid var(--bar);border-radius:10px;background:var(--card);padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--tx);font:inherit;font-size:11px}
+.cell.on{border-color:var(--ac)}.cell:disabled{opacity:.4}.cell b{font-size:12px}
+.cnt{width:96px;margin:0;text-align:center;padding:7px}
+.bt .fi{margin:0;flex:2;min-width:0}
+@keyframes sp{0%{transform:rotate(0) scale(1)}50%{transform:rotate(360deg) scale(1.3)}100%{transform:rotate(720deg) scale(1)}}
+.ar{padding:10px 0;border-top:1px solid var(--bar);margin-top:8px}
+.pb{display:block;width:100%}
+h4{margin:0 0 2px;font-size:15px}
+</style>
+</head>
+<body>
+<div class="tabs" id="tb"></div>
+<div id="app"></div>
+<div class="mu" style="text-align:center;margin-top:8px">Oʻyin: haqiqiy pul va haqiqiy kompaniyalar emas. Narxlar tasodifiy.</div>
 
-  DB.collection("admins").onSnapshot(function(s){
-   AL = s.docs.map(function(q){var x=Object.assign({},q.data()||{});x.id=q.id;return x});
-   var me = AL.filter(function(x){return x.id===UID})[0];
-   if(me && me.revoked && S.admin){S.admin=false; MSG="Admin huquqingiz olib tashlandi."; save()}
-   var ae = document.activeElement;
-   if(!down && !AD && !(ae && /^(INPUT|SELECT)$/.test(ae.tagName))) render()
-  },function(){});
+<!-- Firebase (Sizning sozlamalaringiz) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+var FIREBASE_CONFIG={
+  apiKey:"AIzaSyC2f4ieqUpme8vOhPD-RQ9bI0Ne8N0VIKc",
+  authDomain:"akiya-77a1f.firebaseapp.com",
+  projectId:"akiya-77a1f",
+  appId:"1:893486324089:web:784b8a5c2e9de94f3bb7a8"
+};
 
-  regAdmin();
-  pushNow(true); setInterval(pushNow,8000); render()
-}).catch(function(){});
+var PFX="aksiya_";
+if(window.firebase){
+  try{firebase.initializeApp(FIREBASE_CONFIG)}catch(e){}
+}
+var fdb=firebase.firestore();
+function P(p){return PFX+p}
+function wrap(s){return {id:s.id,exists:s.exists,data:function(){return s.data()}}}
+window.claude={use:function(n){
+  if(n==='user')return firebase.auth().signInAnonymously().then(function(c){return {id:function(){return c.user.uid},isOwner:function(){return false}}});
+  if(n==='db')return Promise.resolve({
+   doc:function(p){var r=fdb.doc(P(p));return {
+    get:function(){return r.get().then(wrap)},
+    set:function(d){return r.set(d)},
+    delete:function(){return r.delete()},
+    onSnapshot:function(cb,eb){return r.onSnapshot(function(s){cb(wrap(s))},eb)}
+   }},
+   collection:function(p){var c=fdb.collection(P(p));return {
+    onSnapshot:function(cb,eb){return c.onSnapshot(function(s){cb({docs:s.docs.map(wrap)})},eb)},
+    add:function(d){return c.add(d)}
+   }}
+  });
+  return Promise.resolve(null);
+}};
+</script>
 
-for(var pk in S.pp) unpump(pk);
+<script>
+// --- O'YIN MA'LUMOTLARI ---
+var ST=[
+  {t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002,c:"QUYOSH"},
+  {t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001,c:"TEZKOR"},
+  {t:"ONN",n:"Oltin Non",p:4.8,v:.02,d:.001,c:"NON"},
+  {t:"ZMT",n:"Zamon Texno",p:3.2,v:.05,d:.003,c:"ZAMON"},
+  {t:"BHR",n:"Bahor Dori",p:.75,v:.08,d:0,c:"BAHOR"},
+  {t:"YLQ",n:"Yoʻl Qurilish",p:5.5,v:.03,d:.0015,c:"YOL"},
+  {t:"BMW",n:"BMW",p:2500,v:.12,d:0,c:"M5"},
+  {t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002,c:"IPHONE"},
+  {t:"MEMC",n:"MemCoin",p:10000,v:.09,d:0,c:"ILON"}
+];
+var SM={};ST.forEach(function(s){SM[s.t]=s});var BASE_ST=ST.slice();
+var MC={BONUS50:50,BOYLIK:500,KATTA:5000};
+var ADMIN_PASS="ADMIN2024"; 
+var DB=null,CFG={codes:{},stocks:[]};
+var ST2={upK:.9,allOff:false,off:[],blocked:[],codes2:[],adOn:true,adVideo:"",adReward:1,adSecs:5,adCool:30,adText:"Homiy reklamasi",pulse:null,fx:{},marketImpact:true};
+var BMSG="";
+var K="aksiya6",S=null,TAB="w",DET=null,MSG="",down=false,rsT=0;
+var UID="user_123"; // Firebase ishlatilmasa, oddiy ID
+var AD=false; // Admin panel holati
+
+function fresh(){
+  var px={},h={};
+  ST.forEach(function(s){px[s.t]=s.p;h[s.t]=[s.p]});
+  return{cash:10,hold:{},px:px,h:h,real:0,t:Date.now(),seen:false,admin:false,used:[],pp:{},custom:{},cstocks:[],inbox:[],got:[]};
+}
+
+try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
+if(!S||!S.px) S=fresh();
+S.used = S.used || [];
+S.pp = S.pp || {};
+S.custom = S.custom || {};
+S.cstocks = S.cstocks || [];
+S.inbox = S.inbox || [];
+S.got = S.got || [];
+
+function okSt(s){return s&&typeof s.t==="string"&&/^[A-Z0-9]{2,5}$/.test(s.t)&&typeof s.n==="string"&&/^[\p{L}\p{N} .'ʻ’&-]{1,24}$/u.test(s.n)&&s.p>=.05&&s.v>0&&s.v<=.2&&typeof s.c==="string"&&/^[A-Z0-9]{3,16}$/.test(s.c)}
+function customStocks(){var a=[],seen={};BASE_ST.forEach(function(b){seen[b.t]=1});(CFG.stocks||[]).concat(S.cstocks||[]).forEach(function(s){if(okSt(s)&&!seen[s.t]){seen[s.t]=1;a.push({t:s.t,n:s.n,p:+s.p,v:+s.v,d:0,c:s.c})}});return a}
+
+function applyStocks(){
+  ST.length=0;BASE_ST.forEach(function(b){ST.push(b)});customStocks().forEach(function(s){ST.push(s)});
+  for(var k in SM)delete SM[k];
+  ST.forEach(function(s){SM[s.t]=s;if(S.px[s.t]===undefined||!S.h[s.t]){S.px[s.t]=s.p;S.h[s.t]=[s.p]}});
+  for(var t in S.hold)if(!SM[t]){S.cash+=S.hold[t].sh*(S.px[t]||0);delete S.hold[t]}
+  for(var q in S.pp)if(!SM[q])delete S.pp[q];
+  if(DET&&!SM[DET])DET=null;
+}
+applyStocks();
+
+function allCodes(){var o={},k;for(k in MC)o[k]=MC[k];for(k in CFG.codes)if(+CFG.codes[k]>0)o[k]=+CFG.codes[k];for(k in S.custom)o[k]=S.custom[k];return o}
+function save(){S.t=Date.now();try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
+function rnd(){var u=0;for(var i=0;i<6;i++)u+=Math.random();return(u-3)/Math.sqrt(.5)}
+function step(){
+  ST.forEach(function(s){
+    if(S.pp[s.t]!==undefined || S.px[s.t]===undefined || !S.h[s.t]) return;
+    var c=S.px[s.t],bs=(ST2.fx[s.t]&&+ST2.fx[s.t].p>0)?+ST2.fx[s.t].p:s.p,p=c*(1+s.d+s.v*rnd()+.01*(bs/c-1));
+    if(p<.05)p=.05+Math.random()*.05;
+    S.px[s.t]=p;var h=S.h[s.t];h.push(p);if(h.length>40)h.shift();
+  });
+}
+var n0=Math.min(60,Math.floor((Date.now()-S.t)/4000));for(var i=0;i<n0;i++)step();
+
+function f(x){return x.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g," ")}
+function sg(x){return(x>=0?"+":"−")+"$"+f(Math.abs(x))}
+function worth(){var v=0;for(var t in S.hold)v+=S.hold[t].sh*S.px[t];return v}
+function coin(t,sz){return '<div class="ic" style="width:'+sz+'px;height:'+sz+'px;background:var(--ac);font-size:'+(sz/2.5)+'px">'+t.slice(0,2)+'</div>'}
+function spark(a,up,big){
+  var mn=Math.min.apply(0,a),mx=Math.max.apply(0,a),hh=big?60:28;
+  var pts=a.map(function(v,i){return(i*100/(a.length-1||1)).toFixed(1)+","+(hh-(v-mn)/((mx-mn)||1)*hh).toFixed(1)}).join(" ");
+  return '<svg viewBox="0 0 100 '+hh+'" '+(big?'width="100%" height="90" preserveAspectRatio="none"':'width="90" height="28"')+'><polyline vector-effect="non-scaling-stroke" fill="none" stroke="'+(up?"var(--ac)":"var(--rd)")+'" stroke-width="2" points="'+pts+'"/></svg>';
+}
+function unpump(t){
+  if(S.pp[t]===undefined)return;
+  S.px[t]=S.pp[t];delete S.pp[t];S.h[t].push(S.px[t]);if(S.h[t].length>40)S.h[t].shift();
+  if(DET===t)MSG="Narx oldingi holatiga qaytdi.";save();render();
+}
+
+// --- KO'RINISHLAR (VIEWS) ---
+function wallet(){
+  var v=worth(),tot=S.cash+v,pl=tot-10,h="";
+  if(!S.seen)h+='<div class="card gift"><b>🎁 Xush kelibsiz!</b><div>Sizga <b>$10</b> sovgʻa qilindi. Aksiya sotib oling, narxi oshishini kuting va soting.</div><button data-a="ok">Boshlash</button></div>';
+  h+='<div class="card"><div class="mu">Naqd pul</div><div class="n">$'+f(S.cash)+'</div></div>';
+  h+='<div class="card"><div class="row"><span class="mu">Aksiyalar qiymati</span><b>$'+f(v)+'</b></div><div class="row" style="margin-top:8px"><span class="mu">Jami boylik</span><b>$'+f(tot)+'</b></div><div class="row" style="margin-top:8px"><span class="mu">Umumiy foyda / zarar</span><b class="'+(pl>=0?"up":"dn")+'">'+sg(pl)+'</b></div><div class="row" style="margin-top:8px"><span class="mu">Sotishdan olingan foyda</span><b class="'+(S.real>=0?"up":"dn")+'">'+sg(S.real)+'</b></div></div>';
+  return h;
+}
+
+function market(){
+  return (BMSG?'<div class="card" style="font-weight:700">'+BMSG+'</div>':"")+ST.map(function(s){
+    var h=S.h[s.t]||[s.p],p=S.px[s.t]||s.p,ch=p/h[0]-1,up=ch>=0,H=S.hold[s.t],d=S.cash<.01?" disabled":"";
+    var totalVal = H ? (H.sh * p) : 0;
+    var stat = H ? H.sh.toFixed(3) : "0";
+    return '<div class="card" data-open="'+s.t+'">' +
+      '<div class="row"><div style="display:flex;gap:10px;align-items:center">'+coin(s.t,46)+
+      '<div><b>'+s.n+'</b><div class="mu">'+s.t+' • sizda: '+stat+' ta'+(H?' ($'+f(totalVal)+')':'')+'</div></div></div>'+
+      spark(h,up)+'</div>'+
+      '<div class="row" style="margin-top:6px"><span style="font-size:22px;font-weight:800">$'+f(p)+'</span>'+
+      '<b class="'+(up?"up":"dn")+'">'+(up?"▲ +":"▼ ")+(ch*100).toFixed(1)+'%</b></div>'+
+      '<div class="bt" style="margin-top:12px">' +
+        '<input class="fi" id="bi_'+s.t+'" type="text" autocomplete="off" placeholder="Pul ($): 100, 5k, 2M">'+
+        '<button data-a="bx" data-t="'+s.t+'"'+d+'>Sotib ol</button>'+
+      '</div>'+
+      '<div class="bt">' +
+        '<button data-a="b" data-t="'+s.t+'" data-v="1x" style="background:var(--tx);color:var(--bg)"'+d+'>1 dona olish (1x)</button>'+
+        '<button data-a="b" data-t="'+s.t+'" data-v="0"'+d+'>Hammasini</button>'+
+      '</div>'+
+    '</div>';
+  }).join("");
+}
+
+function port(){
+  var k=Object.keys(S.hold),h="";
+  h+=k.length?k.map(function(t){
+    var H=S.hold[t],val=H.sh*S.px[t],pl=val-H.cost;
+    return '<div class="card" data-open="'+t+'"><div class="row"><div style="display:flex;gap:10px;align-items:center">'+coin(t,40)+'<div><b>'+SM[t].n+'</b><div class="mu">'+t+' • '+H.sh.toFixed(3)+' ta</div></div></div><b>$'+f(val)+'</b></div><div class="row mu" style="margin-top:6px"><span>Sotib olingan: $'+f(H.cost)+'</span><b class="'+(pl>=0?"up":"dn")+'">'+sg(pl)+'</b></div><div class="bt"><button class="s" data-a="s" data-t="'+t+'" data-f=".5">Yarmini sot</button><button class="s" data-a="s" data-t="'+t+'" data-f="1">Hammasini sot</button></div></div>';
+  }).join(""):'<div class="card mu" style="text-align:center">Hozircha aksiyangiz yoʻq. Bozor boʻlimidan sotib oling.</div>';
+  
+  h+='<div class="card"><h4>🎟 Promokod</h4><div class="mu">Pul yoki admin huquqini beradi</div><input class="fi" id="pi" placeholder="Promokodni kiriting" autocomplete="off" autocapitalize="characters"><button class="pb" data-a="pc">Qoʻllash</button><div class="msg">'+MSG+'</div></div>';
+  
+  if(S.admin){
+    h+='<div class="card"><h4>👑 Admin panel</h4>';
+    h+='<input class="fi" id="am" type="text" autocomplete="off" placeholder="Qancha pul qoʻshish (masalan: 100k, 2.5m)"><button class="pb" data-a="am">Pul qoʻshish</button>';
+    h+='<select class="fi" id="as">'+ST.map(function(s){return'<option value="'+s.t+'">'+s.n+'</option>'}).join("")+'</select>';
+    h+='<input class="fi" id="ap" type="text" autocomplete="off" placeholder="Yangi narx $ (masalan: 50 yoki 2k)"><button class="pb" data-a="ap">3 soniyaga</button>';
+    h+='<button class="pb" style="margin-top:6px;background:var(--rd)" data-a="ar2">Asl narxga qaytarish</button>';
+    h+='<div class="bt"><button class="s" data-a="ax">Admindan chiqish</button></div></div>';
+  }
+  return h;
+}
+
+function detail(t){
+  var s=SM[t],h=S.h[t]||[s.p],p=S.px[t]||s.p,ch=p/h[0]-1,up=ch>=0,H=S.hold[t],sh=H?H.sh:0,d=S.cash<.01?" disabled":"",ds=sh<1e-6?" disabled":"";
+  var o='<button class="bk" data-a="bk">← Orqaga</button>';
+  o+='<div class="card"><div class="row"><div style="display:flex;gap:12px;align-items:center">'+coin(t,64)+'<div><b style="font-size:18px">'+s.n+'</b><div class="mu">'+t+'</div></div></div><b class="'+(up?"up":"dn")+'">'+(up?"▲ +":"▼ ")+(ch*100).toFixed(1)+'%</b></div><div class="n">$'+f(p)+'</div>'+spark(h,up,true)+'</div>';
+  o+='<div class="card"><div class="mu">Sizda bor</div><div class="n" style="font-size:32px">'+sh.toFixed(3)+' ta aksiya</div>'+(H?'<div class="row mu"><span>Qiymati: $'+f(sh*p)+' • olingan: $'+f(H.cost)+'</span><b class="'+(sh*p-H.cost>=0?"up":"dn")+'">'+sg(sh*p-H.cost)+'</b></div>':'<div class="mu">Hali sotib olmagansiz</div>')+'</div>';
+  o+='<div class="card"><div class="mu">Naqd pul: $'+f(S.cash)+'</div><input class="fi" id="bd" type="text" autocomplete="off" placeholder="Pul miqdori ($): 100, 5k, 2M, 1B"><div class="bt"><button data-a="bx" data-t="'+t+'"'+d+'>Sotib olish</button><button data-a="b" data-t="'+t+'" data-v="0"'+d+'>Hammasini olish</button></div><div class="bt"><button class="s" data-a="sx" data-t="'+t+'"'+ds+'>Sotish ($)</button><button class="s" data-a="s" data-t="'+t+'" data-f=".5"'+ds+'>Yarmini sot</button><button class="s" data-a="s" data-t="'+t+'" data-f="1"'+ds+'>Hammasini sot</button></div><div class="msg">'+BMSG+'</div></div>';
+  return o;
+}
+
+function borrowView(){
+  var h='<div class="card"><h4>💳 Kredit / Qarz olish</h4><div class="mu">Agar naqd pulingiz $10 dan kam bo\'lib qolsa, shu yerdan qarz olishingiz mumkin.</div>';
+  h+='<div class="n" style="font-size:28px">$'+f(S.cash)+'</div><div class="mu">Naqd pulingiz</div>';
+  if(S.cash < 10) {
+    h+='<div class="card" style="margin-top:16px;background:var(--bar);text-align:center;padding:20px"><b>Sizga $10 qarz berish uchun pastdagi tugmani bosing.</b></div>';
+    h+='<button class="pb" style="padding:16px;font-size:16px" data-a="borrow">💵 $10 qarz olish</button>';
+  } else {
+    h+='<div class="mu" style="margin-top:20px;text-align:center;color:var(--ac)">Sizda yetarli naqd pul bor. Qarz olish faqat pulingiz $10 dan kam bo\'lganda ishlaydi.</div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+function giftView(){ return '<div class="card"><h4>🎁 Sovgʻalar</h4><div class="mu">Tez kunda...</div></div>'; }
+function adView(){ return '<div class="card"><h4>📺 Reklama</h4><div class="mu">Tez kunda...</div></div>'; }
+function upView(){ return '<div class="card"><h4>⬆️ Upgrade</h4><div class="mu">Tez kunda...</div></div>'; }
+function ttView(){ return '<div class="card"><h4>🎃 Trick</h4><div class="mu">Tez kunda...</div></div>'; }
+
+function render(){
+  var T=[["w","💵 Hamyon"],["m","📈 Bozor"],["p","💼 Portfel"],["l","💳 Olish"]];
+  document.getElementById("tb").innerHTML=T.map(function(x){return'<button data-a="tab" data-t="'+x[0]+'" class="'+(TAB===x[0]&&!DET?"on":"")+'">'+x[1]+'</button>'}).join("");
+  
+  document.getElementById("app").innerHTML=DET?detail(DET):TAB==="w"?wallet():TAB==="m"?market():TAB==="p"?port():TAB==="l"?borrowView():wallet();
+}
+
+// --- TUGMALAR BOSILGANDA ISHLASH (EVENT DELEGATION) ---
+document.body.addEventListener("click", function(e){
+  var btn = e.target.closest("button");
+  if(!btn) {
+    var card = e.target.closest("[data-open]");
+    if(card){ DET = card.getAttribute("data-open"); render(); }
+    return;
+  }
+  
+  var a = btn.getAttribute("data-a");
+  var t = btn.getAttribute("data-t");
+  var v = btn.getAttribute("data-v");
+  var f = btn.getAttribute("data-f");
+  
+  if(a === "tab"){ TAB = t; DET = null; MSG = ""; render(); }
+  else if(a === "ok"){ S.seen = true; save(); render(); }
+  else if(a === "bk"){ DET = null; render(); }
+  else if(a === "b"){ 
+    var val = v === "0" ? S.cash : 10;
+    if(val > 0 && S.cash >= val) {
+      S.cash -= val;
+      if(!S.hold[t]) S.hold[t] = {sh:0, cost:0};
+      S.hold[t].sh += val / S.px[t];
+      S.hold[t].cost += val;
+      save(); render();
+    }
+  }
+  else if(a === "s"){
+    var part = f ? parseFloat(f) : 1;
+    if(S.hold[t]){
+      var sh = S.hold[t].sh * part;
+      var earn = sh * S.px[t];
+      S.cash += earn;
+      S.real += earn - (S.hold[t].cost * part);
+      S.hold[t].sh -= sh;
+      S.hold[t].cost -= (S.hold[t].cost * part);
+      if(S.hold[t].sh < 0.0001) delete S.hold[t];
+      save(); render();
+    }
+  }
+  else if(a === "borrow"){
+    if(S.cash < 10){ S.cash += 10; save(); render(); }
+  }
+  else if(a === "ax"){
+    S.admin = false; save(); render();
+  }
+  else if(a === "pc"){
+    var code = document.getElementById("pi").value.trim().toUpperCase();
+    var codes = allCodes();
+    if(codes[code] && S.used.indexOf(code) < 0) {
+      S.cash += codes[code];
+      S.used.push(code);
+      MSG = "✅ Promokod qabul qilindi: +$" + codes[code];
+      save(); render();
+    } else {
+      MSG = "❌ Noto'g'ri yoki ishlatilgan promokod";
+      render();
+    }
+  }
+  else if(a === "am"){
+    var amVal = parseFloat(document.getElementById("am").value) || 1000;
+    S.cash += amVal; save(); render();
+  }
+});
+
+// --- O'YINNI ISHGA TUSHIRISH ---
+applyStocks();
+setInterval(step, 4000);
 render();
 </script>
 </body>
