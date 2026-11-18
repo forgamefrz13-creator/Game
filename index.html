@@ -64,8 +64,10 @@ h4{margin:0 0 2px;font-size:15px}
 <script>
 // Firebase sozlamalari
 var FIREBASE_CONFIG={apiKey:"AIzaSyC2f4ieqUpme8vOhPD-RQ9bI0Ne8N0VIKc",authDomain:"akiya-77a1f.firebaseapp.com",projectId:"akiya-77a1f",appId:"1:893486324089:web:784b8a5c2e9de94f3bb7a8"};
-if(window.firebase){ try{firebase.initializeApp(FIREBASE_CONFIG)}catch(e){} }
-var DB = window.firebase ? firebase.firestore() : null;
+var DB = null;
+try {
+  if(window.firebase){ firebase.initializeApp(FIREBASE_CONFIG); DB = firebase.firestore(); }
+} catch(e) { console.log("Firebase xatosi:", e); }
 
 // O'yin ma'lumotlari
 var ST=[
@@ -83,7 +85,6 @@ var K="aksiya6",S=null,TAB="w",DET=null,MSG="",isSpinning = false;
 var MY_ID = "user_" + Math.floor(10000 + Math.random() * 90000);
 var LEADERBOARD = [];
 
-// Promokodlar
 var DEFAULT_PROMOS = {
   "BONUS50": { reward: 50, active: true, isAdminOnly: false },
   "BOYLIK": { reward: 500, active: true, isAdminOnly: false },
@@ -94,7 +95,6 @@ var DEFAULT_PROMOS = {
 var GLOBAL_PROMOS = JSON.parse(localStorage.getItem("global_promos")) || DEFAULT_PROMOS;
 var ADMINS_LIST = JSON.parse(localStorage.getItem("global_admins")) || [];
 
-// O'yin holati
 function fresh(){
   var px={},h={};
   ST.forEach(function(s){px[s.t]=s.p;h[s.t]=[s.p]});
@@ -145,7 +145,7 @@ if(DB){
       LEADERBOARD.push(data); 
     });
     if(TAB === "w" && !DET) render();
-  });
+  }, function(err){ console.log("Leaderboard xatosi:", err); });
 }
 
 // --- VIEWS ---
@@ -350,5 +350,4 @@ document.body.addEventListener("click", function(e){
   else if(a === "spin"){
     if(isSpinning || S.luck <= 0) return;
     var betInput = document.getElementById("betAmount");
-    var bet = parseFloat(betInput.value);
-    var msgEl = docume
+    v2
