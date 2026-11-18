@@ -75,7 +75,6 @@ var BMSG="";
 var K="aksiya6",S=null,TAB="w",DET=null,MSG="",down=false;
 var isSpinning = false;
 
-// Promokodlar bazasi (Standart holatda faol)
 var PROMO_DB = {
   "BONUS50": { reward: 50, active: true },
   "BOYLIK": { reward: 500, active: true },
@@ -86,17 +85,18 @@ var PROMO_DB = {
 function fresh(){
   var px={},h={};
   ST.forEach(function(s){px[s.t]=s.p;h[s.t]=[s.p]});
-  return{cash:10,hold:{},px:px,h:h,real:0,t:Date.now(),seen:false,admin:false,used:[],pp:{},custom:{},luck:0, promoStates: PROMO_DB};
+  return{cash:10,hold:{},px:px,h:h,real:0,t:Date.now(),seen:false,admin:false,used:[],pp:{},custom:{},cstocks:[],luck:0, promoStates: JSON.parse(JSON.stringify(PROMO_DB))};
 }
 
 try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
 if(!S||!S.px) S=fresh();
 if(S.luck === undefined) S.luck = 0;
-if(!S.promoStates) S.promoStates = PROMO_DB; // Eski o'yinchilar uchun
+if(!S.promoStates) S.promoStates = JSON.parse(JSON.stringify(PROMO_DB));
 
 function save(){S.t=Date.now();try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
 function rnd(){var u=0;for(var i=0;i<6;i++)u+=Math.random();return(u-3)/Math.sqrt(.5)}
 
+// Narxlar o'zgarishi
 function step(){
   ST.forEach(function(s){
     if(S.pp[s.t]!==undefined || S.px[s.t]===undefined || !S.h[s.t]) return;
@@ -163,14 +163,12 @@ function port(){
   
   h+='<div class="card"><h4>🎟 Promokod</h4><input class="fi" id="pi" placeholder="Promokodni kiriting" autocapitalize="characters"><button class="pb" data-a="pc">Qoʻllash</button><div class="msg">'+MSG+'</div></div>';
   
-  // ADMIN PANEL
   if(S.admin) {
     h+='<div class="card admin-box"><h4 style="color:var(--rd)">👑 Admin Panel</h4>';
     h+='<div class="mu" style="margin-bottom:10px">Omad qo\'shish:</div>';
     h+='<input class="fi" id="luckAdd" type="number" placeholder="Omad (masalan: 100)">';
     h+='<button class="pb" style="background:var(--rd); margin-bottom:15px;" data-a="addluck">O\'zimga omad qo\'shish</button>';
     
-    // PROMOKODLARNI BOSHQARISH
     h+='<div class="mu" style="margin-bottom:5px; font-weight:bold; color:var(--tx);">Promokodlar holati:</div>';
     for(var code in S.promoStates) {
       var p = S.promoStates[code];
@@ -220,7 +218,6 @@ document.body.addEventListener("click", function(e){
   if(a === "tab"){ TAB = t; DET = null; MSG = ""; render(); }
   else if(a === "bk"){ DET = null; render(); }
   
-  // PROMOKOD MANTIQI
   else if(a === "pc"){
     var inputCode = document.getElementById("pi").value.trim().toUpperCase();
     if(inputCode === "ADMIN2024") {
@@ -242,7 +239,6 @@ document.body.addEventListener("click", function(e){
     }
   }
   
-  // ADMIN PROMOKODNI YOQISH/O'CHIRISH
   else if(a === "togglePromo" && S.admin) {
     if(S.promoStates[code]) {
       S.promoStates[code].active = !S.promoStates[code].active;
@@ -250,14 +246,12 @@ document.body.addEventListener("click", function(e){
     }
   }
   
-  // ADMIN LUCK QO'SHISH
   else if(a === "addluck"){
     var lVal = parseInt(document.getElementById("luckAdd").value) || 0;
     if(lVal > 0) { S.luck += lVal; save(); MSG = "✅ Omad +" + lVal; render(); }
   }
   else if(a === "ax"){ S.admin = false; save(); render(); }
   
-  // KAZINO O'YINI
   else if(a === "spin"){
     if(isSpinning || S.luck < 100) return;
     var betInput = document.getElementById("betAmount");
@@ -289,7 +283,6 @@ document.body.addEventListener("click", function(e){
     }, 3100);
   }
   
-  // AKSIYA OLISH/SOTISH
   else if(a === "bx"){
     var inp = document.getElementById("bd");
     var val = inp ? (parseFloat(inp.value) || S.cash) : S.cash;
@@ -312,7 +305,17 @@ document.body.addEventListener("click", function(e){
 });
 
 setInterval(step, 3000);
-setInterval(function() { if(!DET && TAB!=="g") render(); }, 3000); 
+
+// 🔥 MUAMMO HAL QILINDI: Ekran faqat inputda yozmayotganingizda yangilanadi
+setInterval(function() { 
+  var active = document.activeElement;
+  var isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT");
+  
+  if(!DET && TAB!=="g" && !isTyping) {
+    render(); 
+  }
+}, 3000); 
+
 render();
 </script>
 </body>
