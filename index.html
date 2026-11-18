@@ -57,48 +57,49 @@ h4{margin:0 0 2px;font-size:15px}
 <div id="app"></div>
 <div class="mu" style="text-align:center;margin-top:8px">Oʻyin: haqiqiy pul va kompaniyalar emas.</div>
 
-<!-- Firebase (Ma'lumotlar bazasi uchun) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-// Sozlamalar
+// Firebase sozlamalari
 var FIREBASE_CONFIG={apiKey:"AIzaSyC2f4ieqUpme8vOhPD-RQ9bI0Ne8N0VIKc",authDomain:"akiya-77a1f.firebaseapp.com",projectId:"akiya-77a1f",appId:"1:893486324089:web:784b8a5c2e9de94f3bb7a8"};
 if(window.firebase){ try{firebase.initializeApp(FIREBASE_CONFIG)}catch(e){} }
 var DB = window.firebase ? firebase.firestore() : null;
 
+// O'yin ma'lumotlari
 var ST=[
-  {t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002,c:"QUYOSH"},
-  {t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001,c:"TEZKOR"},
-  {t:"ONN",n:"Oltin Non",p:4.8,v:.02,d:.001,c:"NON"},
-  {t:"ZMT",n:"Zamon Texno",p:3.2,v:.05,d:.003,c:"ZAMON"},
-  {t:"BHR",n:"Bahor Dori",p:.75,v:.08,d:0,c:"BAHOR"},
-  {t:"YLQ",n:"Yoʻl Qurilish",p:5.5,v:.03,d:.0015,c:"YOL"},
-  {t:"BMW",n:"BMW",p:2500,v:.12,d:0,c:"M5"},
-  {t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002,c:"IPHONE"}
+  {t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002},
+  {t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001},
+  {t:"ONN",n:"Oltin Non",p:4.8,v:.02,d:.001},
+  {t:"ZMT",n:"Zamon Texno",p:3.2,v:.05,d:.003},
+  {t:"BHR",n:"Bahor Dori",p:.75,v:.08,d:0},
+  {t:"YLQ",n:"Yoʻl Qurilish",p:5.5,v:.03,d:.0015},
+  {t:"BMW",n:"BMW",p:2500,v:.12,d:0},
+  {t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002}
 ];
 var SM={};ST.forEach(function(s){SM[s.t]=s});
 var K="aksiya6",S=null,TAB="w",DET=null,MSG="",isSpinning = false;
-var MY_ID = "user_" + Math.floor(Math.random()*100000); // O'yinchi ID si
+var MY_ID = "user_" + Math.floor(10000 + Math.random() * 90000);
 var LEADERBOARD = [];
 
+// Promokodlar
 var DEFAULT_PROMOS = {
   "BONUS50": { reward: 50, active: true, isAdminOnly: false },
   "BOYLIK": { reward: 500, active: true, isAdminOnly: false },
   "LUCK100": { reward: 0, luck: 100, active: true, isAdminOnly: false },
   "KATTA": { reward: 5000, active: true, isAdminOnly: false },
-  "ADMIN2024": { reward: 0, admin: true, active: true, isAdminOnly: true } // Faqat admin olishi mumkin
+  "ADMIN2024": { reward: 0, admin: true, active: true, isAdminOnly: true }
 };
-
 var GLOBAL_PROMOS = JSON.parse(localStorage.getItem("global_promos")) || DEFAULT_PROMOS;
-var ADMINS_LIST = JSON.parse(localStorage.getItem("global_admins")) || []; // Boshqa adminlar ro'yxati
+var ADMINS_LIST = JSON.parse(localStorage.getItem("global_admins")) || [];
 
+// O'yin holati
 function fresh(){
   var px={},h={};
   ST.forEach(function(s){px[s.t]=s.p;h[s.t]=[s.p]});
-  return{cash:10,hold:{},px:px,h:h,real:0,t:Date.now(),seen:false,admin:false,used:[],luck:0};
+  return{cash:10,hold:{},px:px,h:h,real:0,t:Date.now(),admin:false,used:[],luck:0};
 }
-
 try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
 if(!S||!S.px) S=fresh();
 if(S.luck === undefined) S.luck = 0;
@@ -106,9 +107,8 @@ if(S.luck === undefined) S.luck = 0;
 function save(){
   S.t=Date.now();
   try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
-  if(DB) DB.collection("leaderboard").doc(MY_ID).set({cash: S.cash, admin: S.admin, updated: Date.now()}).catch(()=>{});
+  if(DB) DB.collection("leaderboard").doc(MY_ID).set({cash: S.cash, admin: S.admin, updated: Date.now()}).catch(function(){});
 }
-
 function rnd(){var u=0;for(var i=0;i<6;i++)u+=Math.random();return(u-3)/Math.sqrt(.5)}
 function step(){
   ST.forEach(function(s){
@@ -128,17 +128,22 @@ function coin(t,sz){return '<div class="ic" style="width:'+sz+'px;height:'+sz+'p
 function showConfetti() {
   for(var i=0; i<30; i++) {
     var c = document.createElement('div'); c.className = 'confetti';
-    c.style.left = Math.random() * 100 + 'vw'; c.style.backgroundColor = ['#f00','#0f0','#00f','#ff0','#0ff'][Math.floor(Math.random()*5)];
+    c.style.left = Math.random() * 100 + 'vw'; 
+    c.style.backgroundColor = ['#f00','#0f0','#00f','#ff0','#0ff'][Math.floor(Math.random()*5)];
     c.style.animationDuration = (Math.random()*1 + 1) + 's';
-    document.body.appendChild(c); setTimeout(() => c.remove(), 2000);
+    document.body.appendChild(c); setTimeout(function(){c.remove()}, 2000);
   }
 }
 
-// Firebase'dan Leaderboardni yuklash
+// Leaderboard yuklash
 if(DB){
   DB.collection("leaderboard").orderBy("cash", "desc").limit(10).onSnapshot(function(snap){
     LEADERBOARD = [];
-    snap.forEach(function(doc){ LEADERBOARD.push({id: doc.id, ...doc.data()}); });
+    snap.forEach(function(doc){ 
+      var data = doc.data();
+      data.id = doc.id;
+      LEADERBOARD.push(data); 
+    });
     if(TAB === "w" && !DET) render();
   });
 }
@@ -149,13 +154,12 @@ function wallet(){
   h+='<div class="card"><div class="mu">Naqd pul</div><div class="n">$'+f(S.cash)+'</div></div>';
   h+='<div class="card"><div class="row"><span class="mu">Omadingiz</span><b style="color:'+(S.luck>=100?'var(--ac)':'var(--mu)')+'">'+S.luck+' / 100 🍀</b></div></div>';
   
-  // LEADERBOARD
-  h+='<div class="card"><h4>🏆 Eng boy o\'yinchilar</h4>';
+  h+='<div class="card"><h4>🏆 Peshqadamlar</h4>';
   if(LEADERBOARD.length === 0) h+='<div class="mu">Hozircha hech kim yo\'q</div>';
   LEADERBOARD.forEach(function(u, i) {
     var prefix = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
     var isMe = u.id === MY_ID;
-    h+='<div class="lb-item" style="font-weight: '+(isMe?'bold':'normal')+'; color: '+(isMe?'var(--ac)':'var(--tx)')+'"><span>'+prefix+' '+(isMe?"SIZ":u.id.slice(0,8))+'</span><span>$'+f(u.cash)+'</b></div>';
+    h+='<div class="lb-item" style="font-weight: '+(isMe?'bold':'normal')+'; color: '+(isMe?'var(--ac)':'var(--tx)')+'"><span>'+prefix+' '+(isMe?"SIZ":u.id)+'</span><span>$'+f(u.cash)+'</span></div>';
   });
   h+='</div>';
   
@@ -200,8 +204,8 @@ function port(){
     
     // QIDIRUV
     h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;">';
-    h+='<div class="mu" style="margin-bottom:5px;font-weight:bold;">🔍 Qidiruv (ID yoki ism orqali):</div>';
-    h+='<input class="fi" id="searchAdmin" type="text" placeholder="O\'yinchi ID raqami...">';
+    h+='<div class="mu" style="margin-bottom:5px;font-weight:bold;">🔍 Qidiruv (O\'yinchi IDsi):</div>';
+    h+='<input class="fi" id="searchAdmin" type="text" placeholder="Masalan: user_12345">';
     h+='<div id="searchResult" class="mu"></div>';
     h+='</div>';
 
@@ -212,17 +216,17 @@ function port(){
     h+='<button class="pb" style="background:var(--rd);margin-bottom:5px;" data-a="addluck">Omad qo\'shish</button>';
     h+='</div>';
     
-    // YANGI PROMOKOD YARATISH
+    // YANGI PROMOKOD
     h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;">';
     h+='<div class="mu" style="margin-bottom:5px;font-weight:bold;">➕ Yangi Promokod yaratish:</div>';
     h+='<input class="fi" id="newCodeName" placeholder="Kod nomi (masalan: DOST100)">';
-    h+='<input class="fi" id="newCodeVal" type="number" placeholder="Pul miqdori ($) (yoki 0)">';
+    h+='<input class="fi" id="newCodeVal" type="number" placeholder="Pul miqdori ($)">';
     h+='<select class="fi" id="newCodeType"><option value="false">Oddiy (Hamma uchun)</option><option value="true">Maxsus (Faqat Adminlar)</option></select>';
     h+='<button class="pb" data-a="createPromo">Promokod qo\'shish</button>';
     h+='</div>';
 
-    // PROMOKODLARNI BOSHQARISH
-    h+='<div class="mu" style="margin-bottom:5px; font-weight:bold; color:var(--tx);">Promokodlar holati:</div>';
+    // PROMOKODLAR RO'YXATI
+    h+='<div class="mu" style="margin-bottom:5px; font-weight:bold; color:var(--tx);">Promokodlar:</div>';
     for(var code in GLOBAL_PROMOS) {
       var p = GLOBAL_PROMOS[code];
       var btnClass = p.active ? 'btn-off' : 'btn-on';
@@ -237,11 +241,11 @@ function port(){
       h+='</div></div>';
     }
 
-    // ADMIN BOARD (Boshqa adminlarni chiqarish)
-    h+='<div class="mu" style="margin-top:15px;margin-bottom:5px; font-weight:bold; color:var(--tx);">👑 Admin Board (Boshqa adminlar):</div>';
+    // ADMIN BOARD
+    h+='<div class="mu" style="margin-top:15px;margin-bottom:5px; font-weight:bold; color:var(--tx);">👑 Admin Board:</div>';
     if(ADMINS_LIST.length === 0) h+='<div class="mu">Hozircha boshqa adminlar yo\'q</div>';
     ADMINS_LIST.forEach(function(adm, idx) {
-      h+='<div class="code-item"><span>'+adm.id.slice(0,8)+'</span><button class="btn-toggle btn-off" data-a="revokeAdmin" data-idx="'+idx+'">Chiqarish</button></div>';
+      h+='<div class="code-item"><span>'+adm.id+'</span><button class="btn-toggle btn-off" data-a="revokeAdmin" data-idx="'+idx+'">Chiqarish</button></div>';
     });
 
     h+='<button class="pb" style="margin-top:15px; background:var(--mu)" data-a="ax">Admindan chiqish</button></div>';
@@ -273,7 +277,7 @@ document.body.addEventListener("click", function(e){
     return;
   }
   
-  var a = btn.getAttribute("data-a"), t = btn.getAttribute("data-t"), code = btn.getAttribute("data-code"), f = btn.getAttribute("data-f"), idx = btn.getAttribute("data-idx");
+  var a = btn.getAttribute("data-a"), t = btn.getAttribute("data-t"), code = btn.getAttribute("data-code"), fv = btn.getAttribute("data-f"), idx = btn.getAttribute("data-idx");
   if(navigator.vibrate) navigator.vibrate(30);
   
   if(a === "tab"){ TAB = t; DET = null; MSG = ""; render(); }
@@ -331,8 +335,6 @@ document.body.addEventListener("click", function(e){
 
   else if(a === "revokeAdmin" && S.admin) {
     if(ADMINS_LIST[idx]) {
-      // O'yinchining adminligini olib tashlash
-      if(DB) DB.collection("leaderboard").doc(ADMINS_LIST[idx].id).update({admin: false}).catch(()=>{});
       ADMINS_LIST.splice(idx, 1);
       localStorage.setItem("global_admins", JSON.stringify(ADMINS_LIST));
       save(); render();
@@ -340,4 +342,13 @@ document.body.addEventListener("click", function(e){
   }
   
   else if(a === "addluck"){
-    var lVal = parseInt(document.getElementById("lu
+    var lVal = parseInt(document.getElementById("luckAdd").value) || 0;
+    if(lVal > 0) { S.luck += lVal; save(); MSG = "✅ Omad +" + lVal; render(); }
+  }
+  else if(a === "ax"){ S.admin = false; save(); render(); }
+  
+  else if(a === "spin"){
+    if(isSpinning || S.luck <= 0) return;
+    var betInput = document.getElementById("betAmount");
+    var bet = parseFloat(betInput.value);
+    var msgEl = docume
