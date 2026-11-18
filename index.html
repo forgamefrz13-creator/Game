@@ -29,25 +29,23 @@ body{max-width:480px;margin:0 auto;padding:14px;padding-bottom:80px; overflow-x:
 .bt button:active, .pb:active { transform: scale(0.95); }
 .bt button.s{background:var(--rd)}
 .bt button:disabled{opacity:.4; transform: none;}
-.gift{background:linear-gradient(135deg, var(--ac), #059669);color:#fff; box-shadow: 0 4px 15px rgba(22,163,74,0.4);}
 .fi{display:block;width:100%;padding:12px 14px;margin:8px 0;border-radius:10px;border:2px solid var(--bar);background:var(--bg);color:var(--tx);font:inherit; outline: none; transition: border 0.2s;}
 .fi:focus { border-color: var(--ac); }
 .msg{min-height:20px;font-size:14px;margin-top:6px; font-weight: 600; color: var(--blue);}
 .ic{border-radius:50%;object-fit:cover;flex:none;display:block;box-shadow:0 2px 5px rgba(0,0,0,.1);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;border:2px solid var(--bg); background: linear-gradient(45deg, #10b981, #3b82f6);}
 .pb{display:block;width:100%}
 h4{margin:0 0 2px;font-size:15px}
+.lb-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid var(--bar); font-size:14px; }
 
 /* Effektlar */
 .confetti { position: fixed; width: 10px; height: 10px; background-color: #f00; animation: fall 2s linear forwards; z-index: 9999; pointer-events: none;}
 @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
-
-/* Ruletka */
 .wheel-container { position: relative; width: 250px; height: 250px; margin: 20px auto; border-radius: 50%; border: 8px solid var(--card); box-shadow: 0 0 20px rgba(0,0,0,0.2); overflow: hidden; transition: transform 3s cubic-bezier(0.25, 0.1, 0.25, 1); background: conic-gradient(#ef4444 0deg 45deg, #3b82f6 45deg 90deg, #10b981 90deg 135deg, #f59e0b 135deg 180deg, #8b5cf6 180deg 225deg, #ec4899 225deg 270deg, #06b6d4 270deg 315deg, #84cc16 315deg 360deg); }
 .wheel-pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 30px; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.5); color: var(--rd); }
 .wheel-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: var(--card); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 5; }
 
-/* Admin Panel Maxsus */
-.admin-box { background: rgba(220, 38, 38, 0.1); border: 1px solid var(--rd); padding: 10px; border-radius: 10px; margin-top: 10px; }
+/* Admin Panel */
+.admin-box { background: rgba(220, 38, 38, 0.05); border: 1px solid var(--rd); padding: 12px; border-radius: 10px; margin-top: 10px; }
 .code-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 8px; border-radius: 8px; margin-bottom: 5px; font-size: 13px; }
 .btn-toggle { padding: 4px 8px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
 .btn-on { background: var(--ac); color: white; }
@@ -59,7 +57,16 @@ h4{margin:0 0 2px;font-size:15px}
 <div id="app"></div>
 <div class="mu" style="text-align:center;margin-top:8px">Oʻyin: haqiqiy pul va kompaniyalar emas.</div>
 
+<!-- Firebase (Ma'lumotlar bazasi uchun) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+// Sozlamalar
+var FIREBASE_CONFIG={apiKey:"AIzaSyC2f4ieqUpme8vOhPD-RQ9bI0Ne8N0VIKc",authDomain:"akiya-77a1f.firebaseapp.com",projectId:"akiya-77a1f",appId:"1:893486324089:web:784b8a5c2e9de94f3bb7a8"};
+if(window.firebase){ try{firebase.initializeApp(FIREBASE_CONFIG)}catch(e){} }
+var DB = window.firebase ? firebase.firestore() : null;
+
 var ST=[
   {t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002,c:"QUYOSH"},
   {t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001,c:"TEZKOR"},
@@ -70,36 +77,42 @@ var ST=[
   {t:"BMW",n:"BMW",p:2500,v:.12,d:0,c:"M5"},
   {t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002,c:"IPHONE"}
 ];
-var SM={};ST.forEach(function(s){SM[s.t]=s});var BASE_ST=ST.slice();
-var BMSG="";
-var K="aksiya6",S=null,TAB="w",DET=null,MSG="",down=false;
-var isSpinning = false;
+var SM={};ST.forEach(function(s){SM[s.t]=s});
+var K="aksiya6",S=null,TAB="w",DET=null,MSG="",isSpinning = false;
+var MY_ID = "user_" + Math.floor(Math.random()*100000); // O'yinchi ID si
+var LEADERBOARD = [];
 
-var PROMO_DB = {
-  "BONUS50": { reward: 50, active: true },
-  "BOYLIK": { reward: 500, active: true },
-  "LUCK100": { reward: 0, luck: 100, active: true },
-  "KATTA": { reward: 5000, active: true }
+var DEFAULT_PROMOS = {
+  "BONUS50": { reward: 50, active: true, isAdminOnly: false },
+  "BOYLIK": { reward: 500, active: true, isAdminOnly: false },
+  "LUCK100": { reward: 0, luck: 100, active: true, isAdminOnly: false },
+  "KATTA": { reward: 5000, active: true, isAdminOnly: false },
+  "ADMIN2024": { reward: 0, admin: true, active: true, isAdminOnly: true } // Faqat admin olishi mumkin
 };
+
+var GLOBAL_PROMOS = JSON.parse(localStorage.getItem("global_promos")) || DEFAULT_PROMOS;
+var ADMINS_LIST = JSON.parse(localStorage.getItem("global_admins")) || []; // Boshqa adminlar ro'yxati
 
 function fresh(){
   var px={},h={};
   ST.forEach(function(s){px[s.t]=s.p;h[s.t]=[s.p]});
-  return{cash:10,hold:{},px:px,h:h,real:0,t:Date.now(),seen:false,admin:false,used:[],pp:{},custom:{},cstocks:[],luck:0, promoStates: JSON.parse(JSON.stringify(PROMO_DB))};
+  return{cash:10,hold:{},px:px,h:h,real:0,t:Date.now(),seen:false,admin:false,used:[],luck:0};
 }
 
 try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
 if(!S||!S.px) S=fresh();
 if(S.luck === undefined) S.luck = 0;
-if(!S.promoStates) S.promoStates = JSON.parse(JSON.stringify(PROMO_DB));
 
-function save(){S.t=Date.now();try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
+function save(){
+  S.t=Date.now();
+  try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
+  if(DB) DB.collection("leaderboard").doc(MY_ID).set({cash: S.cash, admin: S.admin, updated: Date.now()}).catch(()=>{});
+}
+
 function rnd(){var u=0;for(var i=0;i<6;i++)u+=Math.random();return(u-3)/Math.sqrt(.5)}
-
-// Narxlar o'zgarishi
 function step(){
   ST.forEach(function(s){
-    if(S.pp[s.t]!==undefined || S.px[s.t]===undefined || !S.h[s.t]) return;
+    if(S.px[s.t]===undefined || !S.h[s.t]) return;
     var c=S.px[s.t],p=c*(1+s.d+s.v*rnd()+.01*(s.p/c-1));
     if(p<.05)p=.05+Math.random()*.05;
     S.px[s.t]=p;var h=S.h[s.t];h.push(p);if(h.length>40)h.shift();
@@ -121,13 +134,31 @@ function showConfetti() {
   }
 }
 
+// Firebase'dan Leaderboardni yuklash
+if(DB){
+  DB.collection("leaderboard").orderBy("cash", "desc").limit(10).onSnapshot(function(snap){
+    LEADERBOARD = [];
+    snap.forEach(function(doc){ LEADERBOARD.push({id: doc.id, ...doc.data()}); });
+    if(TAB === "w" && !DET) render();
+  });
+}
+
 // --- VIEWS ---
 function wallet(){
   var v=worth(),tot=S.cash+v,pl=tot-10,h="";
   h+='<div class="card"><div class="mu">Naqd pul</div><div class="n">$'+f(S.cash)+'</div></div>';
-  h+='<div class="card"><div class="row"><span class="mu">Omadingiz (Luck)</span><b style="color:'+(S.luck>=100?'var(--ac)':'var(--mu)')+'">'+S.luck+' / 100 🍀</b></div>';
-  if(S.luck >= 100) h+='<div class="mu" style="color:var(--ac); margin-top:5px; font-weight:bold;">🔥 Sizda kazinoga kirish huquqi bor!</div>';
+  h+='<div class="card"><div class="row"><span class="mu">Omadingiz</span><b style="color:'+(S.luck>=100?'var(--ac)':'var(--mu)')+'">'+S.luck+' / 100 🍀</b></div></div>';
+  
+  // LEADERBOARD
+  h+='<div class="card"><h4>🏆 Eng boy o\'yinchilar</h4>';
+  if(LEADERBOARD.length === 0) h+='<div class="mu">Hozircha hech kim yo\'q</div>';
+  LEADERBOARD.forEach(function(u, i) {
+    var prefix = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
+    var isMe = u.id === MY_ID;
+    h+='<div class="lb-item" style="font-weight: '+(isMe?'bold':'normal')+'; color: '+(isMe?'var(--ac)':'var(--tx)')+'"><span>'+prefix+' '+(isMe?"SIZ":u.id.slice(0,8))+'</span><span>$'+f(u.cash)+'</b></div>';
+  });
   h+='</div>';
+  
   h+='<div class="card"><div class="row"><span class="mu">Jami boylik</span><b>$'+f(tot)+'</b></div><div class="row" style="margin-top:8px"><span class="mu">Foyda / zarar</span><b class="'+(pl>=0?"up":"dn")+'">'+sg(pl)+'</b></div></div>';
   return h;
 }
@@ -141,11 +172,12 @@ function market(){
 
 function gambleView(){
   var h = '<div class="card" style="text-align:center; border: 2px solid '+(S.luck>=100?'gold':'var(--bar)')+'"><h4 style="font-size:20px;color:'+(S.luck>=100?'gold':'var(--tx)')+'">🎰 Maxsus Kazino</h4>';
-  if(S.luck < 100) {
-    h += '<div class="mu" style="margin:20px 0; font-size:16px;">Kazinoga kirish uchun sizga <b>Omad (Luck)</b> kerak. Hozircha sizda: <b>'+S.luck+' / 100</b></div>';
+  if(S.luck <= 0) {
+    h += '<div class="mu" style="margin:20px 0; font-size:16px;">Kazinoda o\'ynash uchun sizga <b>Omad</b> kerak. Hozircha sizda: <b>'+S.luck+' / 100</b></div>';
     h += '</div>'; return h;
   }
-  h += '<div class="mu" style="margin-bottom:20px; color:var(--ac); font-weight:bold;">Omad 100%! Siz kazinodasiz.</div>';
+  var winChance = Math.min(S.luck, 100);
+  h += '<div class="mu" style="margin-bottom:20px; color:var(--ac); font-weight:bold;">Yutish imkoniyatingiz: '+winChance+'%</div>';
   h += '<div class="wheel-pointer">🔻</div><div id="wheel" class="wheel-container"><div class="wheel-center">$</div></div>';
   h += '<div class="mu" style="margin-top:20px">Pul tikish (Min: $10)</div>';
   h += '<input class="fi" id="betAmount" type="number" placeholder="Tikiladigan miqdor ($)" style="text-align:center;font-size:18px;">';
@@ -164,26 +196,55 @@ function port(){
   h+='<div class="card"><h4>🎟 Promokod</h4><input class="fi" id="pi" placeholder="Promokodni kiriting" autocapitalize="characters"><button class="pb" data-a="pc">Qoʻllash</button><div class="msg">'+MSG+'</div></div>';
   
   if(S.admin) {
-    h+='<div class="card admin-box"><h4 style="color:var(--rd)">👑 Admin Panel</h4>';
-    h+='<div class="mu" style="margin-bottom:10px">Omad qo\'shish:</div>';
-    h+='<input class="fi" id="luckAdd" type="number" placeholder="Omad (masalan: 100)">';
-    h+='<button class="pb" style="background:var(--rd); margin-bottom:15px;" data-a="addluck">O\'zimga omad qo\'shish</button>';
+    h+='<div class="card admin-box"><h4 style="color:var(--rd)">👑 Super Admin Panel</h4>';
     
+    // QIDIRUV
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;">';
+    h+='<div class="mu" style="margin-bottom:5px;font-weight:bold;">🔍 Qidiruv (ID yoki ism orqali):</div>';
+    h+='<input class="fi" id="searchAdmin" type="text" placeholder="O\'yinchi ID raqami...">';
+    h+='<div id="searchResult" class="mu"></div>';
+    h+='</div>';
+
+    // LUCK QO'SHISH
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;">';
+    h+='<div class="mu" style="margin-bottom:5px;font-weight:bold;">🍀 O\'zimga Omad qo\'shish:</div>';
+    h+='<input class="fi" id="luckAdd" type="number" placeholder="Omad (masalan: 100)">';
+    h+='<button class="pb" style="background:var(--rd);margin-bottom:5px;" data-a="addluck">Omad qo\'shish</button>';
+    h+='</div>';
+    
+    // YANGI PROMOKOD YARATISH
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;">';
+    h+='<div class="mu" style="margin-bottom:5px;font-weight:bold;">➕ Yangi Promokod yaratish:</div>';
+    h+='<input class="fi" id="newCodeName" placeholder="Kod nomi (masalan: DOST100)">';
+    h+='<input class="fi" id="newCodeVal" type="number" placeholder="Pul miqdori ($) (yoki 0)">';
+    h+='<select class="fi" id="newCodeType"><option value="false">Oddiy (Hamma uchun)</option><option value="true">Maxsus (Faqat Adminlar)</option></select>';
+    h+='<button class="pb" data-a="createPromo">Promokod qo\'shish</button>';
+    h+='</div>';
+
+    // PROMOKODLARNI BOSHQARISH
     h+='<div class="mu" style="margin-bottom:5px; font-weight:bold; color:var(--tx);">Promokodlar holati:</div>';
-    for(var code in S.promoStates) {
-      var p = S.promoStates[code];
+    for(var code in GLOBAL_PROMOS) {
+      var p = GLOBAL_PROMOS[code];
       var btnClass = p.active ? 'btn-off' : 'btn-on';
       var btnText = p.active ? 'O\'chirish' : 'Yoqish';
       var statusColor = p.active ? 'var(--ac)' : 'var(--rd)';
+      var typeTxt = p.isAdminOnly ? '(Admin)' : '(Oddiy)';
       h+='<div class="code-item">';
-      h+='<span><b>'+code+'</b> ('+(p.reward?'$'+p.reward:'Luck')+')</span>';
+      h+='<span><b>'+code+'</b> '+typeTxt+' ('+(p.reward?'$'+p.reward:'Luck')+')</span>';
       h+='<div style="display:flex; align-items:center; gap:5px;">';
       h+='<span style="font-size:10px; color:'+statusColor+'">'+(p.active?'Faol':'Nofaol')+'</span>';
       h+='<button class="btn-toggle '+btnClass+'" data-a="togglePromo" data-code="'+code+'">'+btnText+'</button>';
       h+='</div></div>';
     }
-    
-    h+='<button class="pb" style="margin-top:10px; background:var(--mu)" data-a="ax">Admindan chiqish</button></div>';
+
+    // ADMIN BOARD (Boshqa adminlarni chiqarish)
+    h+='<div class="mu" style="margin-top:15px;margin-bottom:5px; font-weight:bold; color:var(--tx);">👑 Admin Board (Boshqa adminlar):</div>';
+    if(ADMINS_LIST.length === 0) h+='<div class="mu">Hozircha boshqa adminlar yo\'q</div>';
+    ADMINS_LIST.forEach(function(adm, idx) {
+      h+='<div class="code-item"><span>'+adm.id.slice(0,8)+'</span><button class="btn-toggle btn-off" data-a="revokeAdmin" data-idx="'+idx+'">Chiqarish</button></div>';
+    });
+
+    h+='<button class="pb" style="margin-top:15px; background:var(--mu)" data-a="ax">Admindan chiqish</button></div>';
   }
   return h;
 }
@@ -212,7 +273,7 @@ document.body.addEventListener("click", function(e){
     return;
   }
   
-  var a = btn.getAttribute("data-a"), t = btn.getAttribute("data-t"), code = btn.getAttribute("data-code"), f = btn.getAttribute("data-f");
+  var a = btn.getAttribute("data-a"), t = btn.getAttribute("data-t"), code = btn.getAttribute("data-code"), f = btn.getAttribute("data-f"), idx = btn.getAttribute("data-idx");
   if(navigator.vibrate) navigator.vibrate(30);
   
   if(a === "tab"){ TAB = t; DET = null; MSG = ""; render(); }
@@ -220,103 +281,63 @@ document.body.addEventListener("click", function(e){
   
   else if(a === "pc"){
     var inputCode = document.getElementById("pi").value.trim().toUpperCase();
-    if(inputCode === "ADMIN2024") {
-      S.admin = true; MSG = "✅ Admin huquqi berildi!"; save(); render();
-    } else if (S.promoStates[inputCode]) {
-      var promo = S.promoStates[inputCode];
+    var promo = GLOBAL_PROMOS[inputCode];
+    
+    if (promo) {
       if(!promo.active) {
-        MSG = "❌ Bu promokod vaqtincha o'chirilgan!"; render();
+        MSG = "❌ Bu promokod vaqtincha o'chirilgan!";
+      } else if (promo.isAdminOnly && !S.admin) {
+        MSG = "❌ Bu maxsus promokod, faqat adminlar uchun!";
       } else if (S.used.includes(inputCode)) {
-        MSG = "❌ Siz bu promokodni allaqachon ishlatgansiz!"; render();
+        MSG = "❌ Siz bu promokodni allaqachon ishlatgansiz!";
       } else {
         if(promo.reward) S.cash += promo.reward;
         if(promo.luck) S.luck += promo.luck;
+        if(promo.admin) {
+          S.admin = true;
+          ADMINS_LIST.push({id: MY_ID, date: Date.now()});
+          localStorage.setItem("global_admins", JSON.stringify(ADMINS_LIST));
+          MSG = "✅ Sizga Admin huquqi berildi!";
+        } else {
+          MSG = "✅ Promokod qabul qilindi!";
+        }
         S.used.push(inputCode);
-        MSG = "✅ Promokod qabul qilindi!"; showConfetti(); save(); render();
+        showConfetti();
       }
     } else {
-      MSG = "❌ Noto'g'ri kod"; render();
+      MSG = "❌ Noto'g'ri kod";
     }
+    save(); render();
+  }
+  
+  else if(a === "createPromo" && S.admin) {
+    var cName = document.getElementById("newCodeName").value.trim().toUpperCase();
+    var cVal = parseFloat(document.getElementById("newCodeVal").value) || 0;
+    var cType = document.getElementById("newCodeType").value === "true";
+    if(cName && cVal > 0) {
+      GLOBAL_PROMOS[cName] = { reward: cVal, active: true, isAdminOnly: cType };
+      localStorage.setItem("global_promos", JSON.stringify(GLOBAL_PROMOS));
+      save(); render();
+    } else { alert("Kod nomi va pul miqdorini kiriting!"); }
   }
   
   else if(a === "togglePromo" && S.admin) {
-    if(S.promoStates[code]) {
-      S.promoStates[code].active = !S.promoStates[code].active;
+    if(GLOBAL_PROMOS[code]) {
+      GLOBAL_PROMOS[code].active = !GLOBAL_PROMOS[code].active;
+      localStorage.setItem("global_promos", JSON.stringify(GLOBAL_PROMOS));
+      save(); render();
+    }
+  }
+
+  else if(a === "revokeAdmin" && S.admin) {
+    if(ADMINS_LIST[idx]) {
+      // O'yinchining adminligini olib tashlash
+      if(DB) DB.collection("leaderboard").doc(ADMINS_LIST[idx].id).update({admin: false}).catch(()=>{});
+      ADMINS_LIST.splice(idx, 1);
+      localStorage.setItem("global_admins", JSON.stringify(ADMINS_LIST));
       save(); render();
     }
   }
   
   else if(a === "addluck"){
-    var lVal = parseInt(document.getElementById("luckAdd").value) || 0;
-    if(lVal > 0) { S.luck += lVal; save(); MSG = "✅ Omad +" + lVal; render(); }
-  }
-  else if(a === "ax"){ S.admin = false; save(); render(); }
-  
-  else if(a === "spin"){
-    if(isSpinning || S.luck < 100) return;
-    var betInput = document.getElementById("betAmount");
-    var bet = parseFloat(betInput.value);
-    var msgEl = document.getElementById("gambleMsg");
-    var wheel = document.getElementById("wheel");
-    
-    if(isNaN(bet) || bet < 10) { msgEl.innerText = "❌ Minimal tikish $10!"; return; }
-    if(S.cash < bet) { msgEl.innerText = "❌ Pulingiz yetarli emas!"; return; }
-    
-    isSpinning = true; S.cash -= bet; save();
-    msgEl.innerText = "Aylanmoqda...";
-    
-    var randomDeg = Math.floor(Math.random() * 360) + 1800; 
-    wheel.style.transform = "rotate(" + randomDeg + "deg)";
-    
-    setTimeout(function() {
-      var isWin = Math.random() < 0.5;
-      if(isWin) {
-        S.cash += bet * 2; msgEl.innerText = "🎉 YUTDINGIZ! +$" + f(bet * 2); msgEl.style.color = "var(--ac)"; showConfetti();
-      } else {
-        msgEl.innerText = "😢 Yutqazdingiz! -$" + f(bet); msgEl.style.color = "var(--rd)";
-      }
-      setTimeout(function(){
-        wheel.style.transition = "none"; wheel.style.transform = "rotate(0deg)"; 
-        setTimeout(function(){ wheel.style.transition = "transform 3s cubic-bezier(0.25, 0.1, 0.25, 1)"; isSpinning = false; }, 50);
-      }, 500);
-      save(); betInput.value = "";
-    }, 3100);
-  }
-  
-  else if(a === "bx"){
-    var inp = document.getElementById("bd");
-    var val = inp ? (parseFloat(inp.value) || S.cash) : S.cash;
-    if(val > 0 && S.cash >= val) {
-      S.cash -= val;
-      if(!S.hold[t]) S.hold[t] = {sh:0, cost:0};
-      S.hold[t].sh += val / S.px[t]; S.hold[t].cost += val;
-      save(); render();
-    }
-  }
-  else if(a === "s"){
-    var part = f ? parseFloat(f) : 1;
-    if(S.hold[t]){
-      var earn = (S.hold[t].sh * part) * S.px[t];
-      S.cash += earn; S.hold[t].sh -= (S.hold[t].sh * part);
-      if(S.hold[t].sh < 0.0001) delete S.hold[t];
-      save(); render();
-    }
-  }
-});
-
-setInterval(step, 3000);
-
-// 🔥 MUAMMO HAL QILINDI: Ekran faqat inputda yozmayotganingizda yangilanadi
-setInterval(function() { 
-  var active = document.activeElement;
-  var isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT");
-  
-  if(!DET && TAB!=="g" && !isTyping) {
-    render(); 
-  }
-}, 3000); 
-
-render();
-</script>
-</body>
-</html>
+    var lVal = parseInt(document.getElementById("lu
