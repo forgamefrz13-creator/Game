@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Aksiya O'yini 🎰</title>
+<title>Aksiya O'yini 🏭</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%8E%B0%3C/text%3E%3C/svg%3E">
 <style>
 :root{--bg:#f4f7f5;--card:#fff;--tx:#18231d;--mu:#6b7a72;--ac:#16a34a;--rd:#dc2626;--bar:#e3e9e5;--blue:#2563eb;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -36,18 +36,26 @@ body{max-width:480px;margin:0 auto;padding:14px;padding-bottom:80px; overflow-x:
 .pb{display:block;width:100%}
 h4{margin:0 0 2px;font-size:15px}
 .lb-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid var(--bar); font-size:14px; }
+
 /* Effektlar */
 .confetti { position: fixed; width: 10px; height: 10px; background-color: #f00; animation: fall 2s linear forwards; z-index: 9999; pointer-events: none;}
 @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
 .wheel-container { position: relative; width: 250px; height: 250px; margin: 20px auto; border-radius: 50%; border: 8px solid var(--card); box-shadow: 0 0 20px rgba(0,0,0,0.2); overflow: hidden; transition: transform 3s cubic-bezier(0.25, 0.1, 0.25, 1); background: conic-gradient(#ef4444 0deg 45deg, #3b82f6 45deg 90deg, #10b981 90deg 135deg, #f59e0b 135deg 180deg, #8b5cf6 180deg 225deg, #ec4899 225deg 270deg, #06b6d4 270deg 315deg, #84cc16 315deg 360deg); }
 .wheel-pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 30px; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.5); color: var(--rd); }
 .wheel-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: var(--card); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 5; }
+
 /* Admin Panel */
 .admin-box { background: rgba(220, 38, 38, 0.05); border: 1px solid var(--rd); padding: 12px; border-radius: 10px; margin-top: 10px; }
 .code-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 8px; border-radius: 8px; margin-bottom: 5px; font-size: 13px; }
 .btn-toggle { padding: 4px 8px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
 .btn-on { background: var(--ac); color: white; }
 .btn-off { background: var(--rd); color: white; }
+
+/* Do'kon / Zavod */
+.shop-item { background: var(--bg); border: 1px solid var(--bar); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+.shop-title { font-weight: bold; font-size: 15px; display: flex; justify-content: space-between; }
+.income-text { color: var(--ac); font-weight: 800; font-size: 13px; }
+.spawn-timer { font-size: 11px; color: var(--rd); font-weight: bold; }
 </style>
 </head>
 <body>
@@ -58,44 +66,60 @@ h4{margin:0 0 2px;font-size:15px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-// --- FIREBASE SOZLAMALARI ---
-var FIREBASE_CONFIG = {
-  apiKey: "AIzaSyC2f4ieqUpme8vOhPD-RQ9bI0Ne8N0VIKc",
-  authDomain: "akiya-77a1f.firebaseapp.com",
-  projectId: "akiya-77a1f",
-  appId: "1:893486324089:web:784b8a5c2e9de94f3bb7a8"
-};
+// --- FIREBASE ---
+var FIREBASE_CONFIG={apiKey:"AIzaSyC2f4ieqUpme8vOhPD-RQ9bI0Ne8N0VIKc",authDomain:"akiya-77a1f.firebaseapp.com",projectId:"akiya-77a1f",appId:"1:893486324089:web:784b8a5c2e9de94f3bb7a8"};
 var DB = null;
-try {
-  if(window.firebase){ firebase.initializeApp(FIREBASE_CONFIG); DB = firebase.firestore(); }
-} catch(e) { console.log("DB xatosi:", e); }
+try { if(window.firebase){ firebase.initializeApp(FIREBASE_CONFIG); DB = firebase.firestore(); } } catch(e) { console.log("DB xatosi:", e); }
 
-// --- O'YIN O'ZGARUVCHILARI ---
+// --- O'YIN MA'LUMOTLARI ---
 var ST=[{t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002},{t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001},{t:"ONN",n:"Oltin Non",p:4.8,v:.02,d:.001},{t:"ZMT",n:"Zamon Texno",p:3.2,v:.05,d:.003},{t:"BHR",n:"Bahor Dori",p:.75,v:.08,d:0},{t:"YLQ",n:"Yoʻl Qurilish",p:5.5,v:.03,d:.0015},{t:"BMW",n:"BMW",p:2500,v:.12,d:0},{t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002}];
 var SM={}; ST.forEach(function(s){SM[s.t]=s});
-var K="aksiya_v7", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
+var K="aksiya_v13", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
 var MY_ID = "user_" + Math.floor(10000 + Math.random() * 90000);
 var LEADERBOARD = [];
+
+// --- DO'KON SPAWN TIZIMI ---
+var PAYBACK_SECONDS = 100 * 60 * 60; // 100 soat = 360,000 sekund
+
+var ALL_SHOP_ITEMS = [
+  { id: "farm", name: "🍎 Olma Bog'i", rentCost: 5000, buyCost: 24000 },
+  { id: "factory", name: "🏭 Kiyim Fabrikasi", rentCost: 25000, buyCost: 120000 },
+  { id: "tech", name: "💻 IT Kompaniya", rentCost: 125000, buyCost: 600000 },
+  { id: "bank", name: "🏦 Bank", rentCost: 500000, buyCost: 2400000 },
+  { id: "oil", name: "🛢 Neft Zavodi", rentCost: 5000000, buyCost: 24000000 },
+  { id: "space", name: "🚀 Koinot Zavodi", rentCost: 50000000, buyCost: 240000000 }
+];
+
+ALL_SHOP_ITEMS.forEach(function(item) {
+  item.baseInc = item.buyCost / PAYBACK_SECONDS; 
+});
+
+var DEFAULT_SPAWNS = [
+  { id: "farm", expire: Date.now() + 3600000 * 2 },
+  { id: "tech", expire: Date.now() + 3600000 * 5 }
+];
 
 var DEFAULT_PROMOS = {
   "BONUS50": { reward: 50, active: true, isAdminOnly: false },
   "BOYLIK": { reward: 500, active: true, isAdminOnly: false },
   "LUCK100": { reward: 0, luck: 100, active: true, isAdminOnly: false },
   "KATTA": { reward: 5000, active: true, isAdminOnly: false },
-  "ADMIN2024": { reward: 0, admin: true, active: true, isAdminOnly: true }
+  "ADMIN2024": { reward: 0, admin: true, active: true, isAdminOnly: false }
 };
 var GLOBAL_PROMOS = JSON.parse(localStorage.getItem("global_promos")) || DEFAULT_PROMOS;
 var ADMINS_LIST = JSON.parse(localStorage.getItem("global_admins")) || [];
 
-// --- HOLATNI YUKLASH ---
 function fresh(){
   var px={}, h={};
   ST.forEach(function(s){px[s.t]=s.p; h[s.t]=[s.p]});
-  return{cash:10, hold:{}, px:px, h:h, real:0, t:Date.now(), admin:false, used:[], luck:0};
+  return{cash:10, hold:{}, px:px, h:h, real:0, t:Date.now(), admin:false, used:[], luck:0, shopInv:[], lastTick:Date.now(), activeSpawns: JSON.parse(JSON.stringify(DEFAULT_SPAWNS))};
 }
 try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
 if(!S||!S.px) S=fresh();
 if(S.luck === undefined) S.luck = 0;
+if(!S.shopInv) S.shopInv = [];
+if(!S.lastTick) S.lastTick = Date.now();
+if(!S.activeSpawns) S.activeSpawns = JSON.parse(JSON.stringify(DEFAULT_SPAWNS));
 
 function save(){
   S.t=Date.now();
@@ -157,6 +181,72 @@ function market(){
   }).join("");
 }
 
+// --- ZAVOD / DO'KON BO'LIMI (INVENTAR VA SOTISH) ---
+function shopView(){
+  var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:white;"><h4>🏭 Zavod va Bizneslar</h4><div class="mu" style="color:#cbd5e1">Har bir narsa o\'zini 100 soatda qoplaydi!</div></div>';
+  
+  h += '<div class="mu" style="margin:10px 0; font-weight:bold;">Sizning Inventaringiz (Tekshirish/Sotish):</div>';
+  if(S.shopInv.length === 0) {
+    h += '<div class="card mu" style="text-align:center; padding:20px;">Hozircha biznesingiz yo\'q. Pastdan sotib oling.</div>';
+  } else {
+    S.shopInv.forEach(function(inv, index) {
+      var item = ALL_SHOP_ITEMS.find(x => x.id === inv.id);
+      var incomePerSec = item.baseInc;
+      var statusText = inv.type === "own" ? "O'zi ishlaydi (100%)" : "Ijarada (20%)";
+      if(inv.type === "rent") incomePerSec = item.baseInc * 0.2;
+      var sellPrice = inv.type === "own" ? item.buyCost : item.rentCost; // Sotish narxi (qaytarish)
+      
+      h += '<div class="shop-item" style="border-color: var(--ac);">';
+      h += '<div class="shop-title"><span>'+item.name+'</span><span class="income-text">+$'+f(incomePerSec)+' / sek</span></div>';
+      h += '<div class="mu" style="margin:4px 0;">Holat: <b>'+statusText+'</b></div>';
+      h += '<button class="pb s" style="margin-top:5px;" data-a="sellBusiness" data-idx="'+index+'">Sotish ($' + f(sellPrice) + ' ga)</button>';
+      h += '</div>';
+    });
+  }
+
+  h += '<div class="mu" style="margin:20px 0 10px; font-weight:bold;">Sotuvda (Spawn bo\'lgan narsalar):</div>';
+  
+  var hasSpawn = false;
+  S.activeSpawns.forEach(function(spawn, idx) {
+    var item = ALL_SHOP_ITEMS.find(x => x.id === spawn.id);
+    if(!item) return;
+    
+    if(Date.now() > spawn.expire) return; 
+    hasSpawn = true;
+
+    var isOwned = S.shopInv.some(x => x.id === item.id && x.type === "own");
+    
+    h += '<div class="shop-item">';
+    h += '<div class="shop-title"><span>'+item.name+'</span><span class="income-text">+$'+f(item.baseInc)+' / sek</span></div>';
+    
+    if(S.admin) {
+      var timeLeft = Math.floor((spawn.expire - Date.now()) / 60000);
+      h += '<div class="spawn-timer">Admin ko\'rinishi: Yana ' + timeLeft + ' daqiqa turadi</div>';
+    }
+
+    if(isOwned) {
+      h += '<div class="mu" style="text-align:center; margin-top:5px; color:var(--ac)">✅ Sizda bor (Ishlayapti)</div>';
+    } else {
+      var rentInc = item.baseInc * 0.2;
+      h += '<div class="bt" style="margin-top:8px;">';
+      h += '<button data-a="buyShop" data-id="'+item.id+'" data-type="rent" data-idx="'+idx+'" style="background:var(--blue)">Ijaraga olish<br><small>$'+f(item.rentCost)+' (Sek: $'+f(rentInc)+')</small></button>';
+      h += '<button data-a="buyShop" data-id="'+item.id+'" data-type="own" data-idx="'+idx+'" style="background:var(--ac)">O\'zimga sotib olish<br><small>$'+f(item.buyCost)+' (Sek: $'+f(item.baseInc)+')</small></button>';
+      h += '</div>';
+    }
+    
+    if(S.admin) {
+      h += '<button class="pb" style="margin-top:5px; background:var(--rd)" data-a="cancelSpawn" data-idx="'+idx+'">Spawnni bekor qilish</button>';
+    }
+    h += '</div>';
+  });
+
+  if(!hasSpawn) {
+    h += '<div class="card mu" style="text-align:center; padding:20px;">Hozircha sotuvda narsa yo\'q. Yangi narsalar paydo bo\'lishini kuting yoki admin qo\'shishini kuting.</div>';
+  }
+
+  return h;
+}
+
 function gambleView(){
   var h = '<div class="card" style="text-align:center; border: 2px solid '+(S.luck>=100?'gold':'var(--bar)')+'"><h4 style="font-size:20px;color:'+(S.luck>=100?'gold':'var(--tx)')+'">🎰 Maxsus Kazino</h4>';
   if(S.luck <= 0) { h += '<div class="mu" style="margin:20px 0; font-size:16px;">Kazinoda o\'ynash uchun sizga <b>Omad</b> kerak. Hozircha sizda: <b>'+S.luck+' / 100</b></div></div>'; return h; }
@@ -181,109 +271,38 @@ function port(){
   
   if(S.admin) {
     h+='<div class="card admin-box"><h4 style="color:var(--rd)">👑 Super Admin Panel</h4>';
-    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">🔍 Qidiruv (O\'yinchi IDsi):</div><input class="fi" id="searchAdmin" type="text" placeholder="Masalan: user_12345"><div id="searchResult" class="mu"></div></div>';
-    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">🍀 O\'zimga Omad qo\'shish:</div><input class="fi" id="luckAdd" type="number" placeholder="Omad (masalan: 100)"><button class="pb" style="background:var(--rd);margin-bottom:5px;" data-a="addluck">Omad qo\'shish</button></div>';
-    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">➕ Yangi Promokod yaratish:</div><input class="fi" id="newCodeName" placeholder="Kod nomi (masalan: DOST100)"><input class="fi" id="newCodeVal" type="number" placeholder="Pul miqdori ($)"><select class="fi" id="newCodeType"><option value="false">Oddiy (Hamma uchun)</option><option value="true">Maxsus (Faqat Adminlar)</option></select><button class="pb" data-a="createPromo">Promokod qo\'shish</button></div>';
-    h+='<div class="mu" style="margin-bottom:5px; font-weight:bold; color:var(--tx);">Promokodlar:</div>';
-    for(var code in GLOBAL_PROMOS) {
-      var p = GLOBAL_PROMOS[code];
-      var btnClass = p.active ? 'btn-off' : 'btn-on';
-      var btnText = p.active ? 'O\'chirish' : 'Yoqish';
-      var statusColor = p.active ? 'var(--ac)' : 'var(--rd)';
-      var typeTxt = p.isAdminOnly ? '(Admin)' : '(Oddiy)';
-      h+='<div class="code-item"><span><b>'+code+'</b> '+typeTxt+' ('+(p.reward?'$'+p.reward:'Luck')+')</span><div style="display:flex; align-items:center; gap:5px;"><span style="font-size:10px; color:'+statusColor+'">'+(p.active?'Faol':'Nofaol')+'</span><button class="btn-toggle '+btnClass+'" data-a="togglePromo" data-code="'+code+'">'+btnText+'</button></div></div>';
+    
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">👥 O\'yinchilar ro\'yxati (Pul berish/Ayirish):</div>';
+    if(LEADERBOARD.length > 0) {
+      LEADERBOARD.forEach(function(player) {
+        h+='<div class="code-item" style="flex-wrap:wrap; gap:5px;">';
+        h+='<span style="font-weight:bold;">'+player.id+'</span>';
+        h+='<span style="color:var(--ac)">$'+f(player.cash)+'</span>';
+        h+='<div style="width:100%; display:flex; gap:5px; margin-top:5px;">';
+        h+='<input type="number" id="amt_'+player.id+'" placeholder="Miqdor" style="flex:1; padding:4px; border-radius:5px; border:1px solid var(--mu);">';
+        h+='<button onclick="modifyCash(\''+player.id+'\', 1, \'amt_'+player.id+'\')" style="background:var(--ac); color:white; border:none; padding:4px 8px; border-radius:5px;">➕</button>';
+        h+='<button onclick="modifyCash(\''+player.id+'\', -1, \'amt_'+player.id+'\')" style="background:var(--rd); color:white; border:none; padding:4px 8px; border-radius:5px;">➖</button>';
+        h+='</div></div>';
+      });
+    } else {
+      h+='<div class="mu">Hozircha o\'yinchilar yo\'q</div>';
     }
-    h+='<div class="mu" style="margin-top:15px;margin-bottom:5px; font-weight:bold; color:var(--tx);">👑 Admin Board:</div>';
-    if(ADMINS_LIST.length === 0) h+='<div class="mu">Hozircha boshqa adminlar yo\'q</div>';
-    ADMINS_LIST.forEach(function(adm, idx) {
-      h+='<div class="code-item"><span>'+adm.id+'</span><button class="btn-toggle btn-off" data-a="revokeAdmin" data-idx="'+idx+'">Chiqarish</button></div>';
-    });
-    h+='<button class="pb" style="margin-top:15px; background:var(--mu)" data-a="ax">Admindan chiqish</button></div>';
-  }
-  return h;
-}
+    h+='</div>';
 
-function detail(t){
-  var s=SM[t], p=S.px[t]||s.p, H=S.hold[t], sh=H?H.sh:0, d=S.cash<.01?" disabled":"", ds=sh<1e-6?" disabled":"";
-  var o='<button class="bk" data-a="bk">← Orqaga</button>';
-  o+='<div class="card"><div class="row"><div style="display:flex;gap:12px;align-items:center">'+coin(t,64)+'<div><b>'+s.n+'</b></div></div></div><div class="n" style="font-size:42px">$'+f(p)+'</div></div>';
-  o+='<div class="card"><div class="mu">Sizda bor</div><div class="n" style="font-size:32px">'+sh.toFixed(3)+' ta</div></div>';
-  o+='<div class="card"><div class="mu">Naqd pul: $'+f(S.cash)+'</div><input class="fi" id="bd" type="number" placeholder="Miqdor ($)"><div class="bt"><button data-a="bx" data-t="'+t+'"'+d+'>Sotib olish</button></div><div class="bt"><button class="s" data-a="s" data-t="'+t+'" data-f="1"'+ds+'>Hammasini sotish</button></div></div>';
-  return o;
-}
-
-function render(){
-  var T=[["w","💵 Hamyon"],["m","📈 Bozor"],["p","💼 Portfel"],["g","🎰 Omad"]];
-  document.getElementById("tb").innerHTML=T.map(function(x){return'<button data-a="tab" data-t="'+x[0]+'" class="'+(TAB===x[0]&&!DET?"on":"")+'">'+x[1]+'</button>'}).join("");
-  document.getElementById("app").innerHTML=DET?detail(DET):TAB==="w"?wallet():TAB==="m"?market():TAB==="p"?port():TAB==="g"?gambleView():wallet();
-}
-
-// --- TUGMALAR BOSILGANDA ---
-document.body.addEventListener("click", function(e){
-  var btn = e.target.closest("button");
-  if(!btn) {
-    var card = e.target.closest("[data-open]");
-    if(card){ DET = card.getAttribute("data-open"); render(); }
-    return;
-  }
-  var a = btn.getAttribute("data-a"), t = btn.getAttribute("data-t"), code = btn.getAttribute("data-code"), fv = btn.getAttribute("data-f"), idx = btn.getAttribute("data-idx");
-  if(navigator.vibrate) navigator.vibrate(30);
-  
-  if(a === "tab"){ TAB = t; DET = null; MSG = ""; render(); }
-  else if(a === "bk"){ DET = null; render(); }
-  else if(a === "pc"){
-    var inputCode = document.getElementById("pi").value.trim().toUpperCase();
-    var promo = GLOBAL_PROMOS[inputCode];
-    if (promo) {
-      if(!promo.active) MSG = "❌ Bu promokod vaqtincha o'chirilgan!";
-      else if (promo.isAdminOnly && !S.admin) MSG = "❌ Bu maxsus promokod, faqat adminlar uchun!";
-      else if (S.used.includes(inputCode)) MSG = "❌ Siz bu promokodni allaqachon ishlatgansiz!";
-      else {
-        if(promo.reward) S.cash += promo.reward;
-        if(promo.luck) S.luck += promo.luck;
-        if(promo.admin) { S.admin = true; ADMINS_LIST.push({id: MY_ID, date: Date.now()}); localStorage.setItem("global_admins", JSON.stringify(ADMINS_LIST)); MSG = "✅ Sizga Admin huquqi berildi!"; } 
-        else MSG = "✅ Promokod qabul qilindi!";
-        S.used.push(inputCode); showConfetti();
-      }
-    } else MSG = "❌ Noto'g'ri kod";
-    save(); render();
-  }
-  else if(a === "createPromo" && S.admin) {
-    var cName = document.getElementById("newCodeName").value.trim().toUpperCase();
-    var cVal = parseFloat(document.getElementById("newCodeVal").value) || 0;
-    var cType = document.getElementById("newCodeType").value === "true";
-    if(cName && cVal > 0) { GLOBAL_PROMOS[cName] = { reward: cVal, active: true, isAdminOnly: cType }; localStorage.setItem("global_promos", JSON.stringify(GLOBAL_PROMOS)); save(); render(); } 
-    else alert("Kod nomi va pul miqdorini kiriting!");
-  }
-  else if(a === "togglePromo" && S.admin) {
-    if(GLOBAL_PROMOS[code]) { GLOBAL_PROMOS[code].active = !GLOBAL_PROMOS[code].active; localStorage.setItem("global_promos", JSON.stringify(GLOBAL_PROMOS)); save(); render(); }
-  }
-  else if(a === "revokeAdmin" && S.admin) {
-    if(ADMINS_LIST[idx]) { ADMINS_LIST.splice(idx, 1); localStorage.setItem("global_admins", JSON.stringify(ADMINS_LIST)); save(); render(); }
-  }
-  else if(a === "addluck"){
-    var lVal = parseInt(document.getElementById("luckAdd").value) || 0;
-    if(lVal > 0) { S.luck += lVal; save(); MSG = "✅ Omad +" + lVal; render(); }
-  }
-  else if(a === "ax"){ S.admin = false; save(); render(); }
-  else if(a === "spin"){
-    if(isSpinning || S.luck <= 0) return;
-    var betInput = document.getElementById("betAmount");
-    var bet = parseFloat(betInput.value);
-    var msgEl = document.getElementById("gambleMsg");
-    var wheel = document.getElementById("wheel");
-    if(isNaN(bet) || bet < 10) { msgEl.innerText = "❌ Minimal tikish $10!"; return; }
-    if(S.cash < bet) { msgEl.innerText = "❌ Pulingiz yetarli emas!"; return; }
-    isSpinning = true; S.cash -= bet; save(); msgEl.innerText = "Aylanmoqda...";
-    var randomDeg = Math.floor(Math.random() * 360) + 1800; wheel.style.transform = "rotate(" + randomDeg + "deg)";
-    setTimeout(function() {
-      var winChance = Math.min(S.luck, 100) / 100; var isWin = Math.random() < winChance; 
-      if(isWin) { S.cash += bet * 2; m<!DOCTYPE html>
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">🍀 O\'zimga Omad qo\'shish:</div><input class="fi" id="luckAdd" type="number" placeholder="Omad (masalan: 100)"><button class="pb" style="background:var(--rd);margin-bottom:5px;" data-a="addluck">Omad qo\'shish</button></div>';
+    
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">➕ Yangi Promokod yaratish:</div><input class="fi" id="newCodeName" placeholder="Kod nomi"><input class="fi" id="newCodeVal" type="number" placeholder="Pul miqdori ($)"><select class="fi" id="newCodeType"><option value="false">Oddiy</option><option value="true">Maxsus</option></select><button class="pb" data-a="createPromo">Promokod qo\'shish</button></div>';
+    
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px; border: 1px solid var(--ac);"><div class="mu" style="margin-bottom:5px;font-weight:bold; color:var(--ac);">📦 Yangi Spawn Qo\'shish:</div>';
+    h+='<select class="fi" id="spawnItem">';
+    ALL_SHOP_ITEMS.forEach(function(it){ h+='<option value="'+it.id+'">'+it.name+' ($'+f(it.buyCost)+')</option>'; });
+    h+='</select>';
+    h+='<input class="fi" id="<!DOCTYPE html>
 <html lang="uz">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Aksiya O'yini 🎰</title>
+<title>Aksiya O'yini 🏭</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%8E%B0%3C/text%3E%3C/svg%3E">
 <style>
 :root{--bg:#f4f7f5;--card:#fff;--tx:#18231d;--mu:#6b7a72;--ac:#16a34a;--rd:#dc2626;--bar:#e3e9e5;--blue:#2563eb;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -316,18 +335,26 @@ body{max-width:480px;margin:0 auto;padding:14px;padding-bottom:80px; overflow-x:
 .pb{display:block;width:100%}
 h4{margin:0 0 2px;font-size:15px}
 .lb-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid var(--bar); font-size:14px; }
+
 /* Effektlar */
 .confetti { position: fixed; width: 10px; height: 10px; background-color: #f00; animation: fall 2s linear forwards; z-index: 9999; pointer-events: none;}
 @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
 .wheel-container { position: relative; width: 250px; height: 250px; margin: 20px auto; border-radius: 50%; border: 8px solid var(--card); box-shadow: 0 0 20px rgba(0,0,0,0.2); overflow: hidden; transition: transform 3s cubic-bezier(0.25, 0.1, 0.25, 1); background: conic-gradient(#ef4444 0deg 45deg, #3b82f6 45deg 90deg, #10b981 90deg 135deg, #f59e0b 135deg 180deg, #8b5cf6 180deg 225deg, #ec4899 225deg 270deg, #06b6d4 270deg 315deg, #84cc16 315deg 360deg); }
 .wheel-pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 30px; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.5); color: var(--rd); }
 .wheel-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: var(--card); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 5; }
+
 /* Admin Panel */
 .admin-box { background: rgba(220, 38, 38, 0.05); border: 1px solid var(--rd); padding: 12px; border-radius: 10px; margin-top: 10px; }
 .code-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 8px; border-radius: 8px; margin-bottom: 5px; font-size: 13px; }
 .btn-toggle { padding: 4px 8px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
 .btn-on { background: var(--ac); color: white; }
 .btn-off { background: var(--rd); color: white; }
+
+/* Do'kon / Zavod */
+.shop-item { background: var(--bg); border: 1px solid var(--bar); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+.shop-title { font-weight: bold; font-size: 15px; display: flex; justify-content: space-between; }
+.income-text { color: var(--ac); font-weight: 800; font-size: 13px; }
+.spawn-timer { font-size: 11px; color: var(--rd); font-weight: bold; }
 </style>
 </head>
 <body>
@@ -338,44 +365,60 @@ h4{margin:0 0 2px;font-size:15px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-// --- FIREBASE SOZLAMALARI ---
-var FIREBASE_CONFIG = {
-  apiKey: "AIzaSyC2f4ieqUpme8vOhPD-RQ9bI0Ne8N0VIKc",
-  authDomain: "akiya-77a1f.firebaseapp.com",
-  projectId: "akiya-77a1f",
-  appId: "1:893486324089:web:784b8a5c2e9de94f3bb7a8"
-};
+// --- FIREBASE ---
+var FIREBASE_CONFIG={apiKey:"AIzaSyC2f4ieqUpme8vOhPD-RQ9bI0Ne8N0VIKc",authDomain:"akiya-77a1f.firebaseapp.com",projectId:"akiya-77a1f",appId:"1:893486324089:web:784b8a5c2e9de94f3bb7a8"};
 var DB = null;
-try {
-  if(window.firebase){ firebase.initializeApp(FIREBASE_CONFIG); DB = firebase.firestore(); }
-} catch(e) { console.log("DB xatosi:", e); }
+try { if(window.firebase){ firebase.initializeApp(FIREBASE_CONFIG); DB = firebase.firestore(); } } catch(e) { console.log("DB xatosi:", e); }
 
-// --- O'YIN O'ZGARUVCHILARI ---
+// --- O'YIN MA'LUMOTLARI ---
 var ST=[{t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002},{t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001},{t:"ONN",n:"Oltin Non",p:4.8,v:.02,d:.001},{t:"ZMT",n:"Zamon Texno",p:3.2,v:.05,d:.003},{t:"BHR",n:"Bahor Dori",p:.75,v:.08,d:0},{t:"YLQ",n:"Yoʻl Qurilish",p:5.5,v:.03,d:.0015},{t:"BMW",n:"BMW",p:2500,v:.12,d:0},{t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002}];
 var SM={}; ST.forEach(function(s){SM[s.t]=s});
-var K="aksiya_v7", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
+var K="aksiya_v13", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
 var MY_ID = "user_" + Math.floor(10000 + Math.random() * 90000);
 var LEADERBOARD = [];
+
+// --- DO'KON SPAWN TIZIMI ---
+var PAYBACK_SECONDS = 100 * 60 * 60; // 100 soat = 360,000 sekund
+
+var ALL_SHOP_ITEMS = [
+  { id: "farm", name: "🍎 Olma Bog'i", rentCost: 5000, buyCost: 24000 },
+  { id: "factory", name: "🏭 Kiyim Fabrikasi", rentCost: 25000, buyCost: 120000 },
+  { id: "tech", name: "💻 IT Kompaniya", rentCost: 125000, buyCost: 600000 },
+  { id: "bank", name: "🏦 Bank", rentCost: 500000, buyCost: 2400000 },
+  { id: "oil", name: "🛢 Neft Zavodi", rentCost: 5000000, buyCost: 24000000 },
+  { id: "space", name: "🚀 Koinot Zavodi", rentCost: 50000000, buyCost: 240000000 }
+];
+
+ALL_SHOP_ITEMS.forEach(function(item) {
+  item.baseInc = item.buyCost / PAYBACK_SECONDS; 
+});
+
+var DEFAULT_SPAWNS = [
+  { id: "farm", expire: Date.now() + 3600000 * 2 },
+  { id: "tech", expire: Date.now() + 3600000 * 5 }
+];
 
 var DEFAULT_PROMOS = {
   "BONUS50": { reward: 50, active: true, isAdminOnly: false },
   "BOYLIK": { reward: 500, active: true, isAdminOnly: false },
   "LUCK100": { reward: 0, luck: 100, active: true, isAdminOnly: false },
   "KATTA": { reward: 5000, active: true, isAdminOnly: false },
-  "ADMIN2024": { reward: 0, admin: true, active: true, isAdminOnly: true }
+  "ADMIN2024": { reward: 0, admin: true, active: true, isAdminOnly: false }
 };
 var GLOBAL_PROMOS = JSON.parse(localStorage.getItem("global_promos")) || DEFAULT_PROMOS;
 var ADMINS_LIST = JSON.parse(localStorage.getItem("global_admins")) || [];
 
-// --- HOLATNI YUKLASH ---
 function fresh(){
   var px={}, h={};
   ST.forEach(function(s){px[s.t]=s.p; h[s.t]=[s.p]});
-  return{cash:10, hold:{}, px:px, h:h, real:0, t:Date.now(), admin:false, used:[], luck:0};
+  return{cash:10, hold:{}, px:px, h:h, real:0, t:Date.now(), admin:false, used:[], luck:0, shopInv:[], lastTick:Date.now(), activeSpawns: JSON.parse(JSON.stringify(DEFAULT_SPAWNS))};
 }
 try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
 if(!S||!S.px) S=fresh();
 if(S.luck === undefined) S.luck = 0;
+if(!S.shopInv) S.shopInv = [];
+if(!S.lastTick) S.lastTick = Date.now();
+if(!S.activeSpawns) S.activeSpawns = JSON.parse(JSON.stringify(DEFAULT_SPAWNS));
 
 function save(){
   S.t=Date.now();
@@ -437,6 +480,72 @@ function market(){
   }).join("");
 }
 
+// --- ZAVOD / DO'KON BO'LIMI (INVENTAR VA SOTISH) ---
+function shopView(){
+  var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:white;"><h4>🏭 Zavod va Bizneslar</h4><div class="mu" style="color:#cbd5e1">Har bir narsa o\'zini 100 soatda qoplaydi!</div></div>';
+  
+  h += '<div class="mu" style="margin:10px 0; font-weight:bold;">Sizning Inventaringiz (Tekshirish/Sotish):</div>';
+  if(S.shopInv.length === 0) {
+    h += '<div class="card mu" style="text-align:center; padding:20px;">Hozircha biznesingiz yo\'q. Pastdan sotib oling.</div>';
+  } else {
+    S.shopInv.forEach(function(inv, index) {
+      var item = ALL_SHOP_ITEMS.find(x => x.id === inv.id);
+      var incomePerSec = item.baseInc;
+      var statusText = inv.type === "own" ? "O'zi ishlaydi (100%)" : "Ijarada (20%)";
+      if(inv.type === "rent") incomePerSec = item.baseInc * 0.2;
+      var sellPrice = inv.type === "own" ? item.buyCost : item.rentCost; // Sotish narxi (qaytarish)
+      
+      h += '<div class="shop-item" style="border-color: var(--ac);">';
+      h += '<div class="shop-title"><span>'+item.name+'</span><span class="income-text">+$'+f(incomePerSec)+' / sek</span></div>';
+      h += '<div class="mu" style="margin:4px 0;">Holat: <b>'+statusText+'</b></div>';
+      h += '<button class="pb s" style="margin-top:5px;" data-a="sellBusiness" data-idx="'+index+'">Sotish ($' + f(sellPrice) + ' ga)</button>';
+      h += '</div>';
+    });
+  }
+
+  h += '<div class="mu" style="margin:20px 0 10px; font-weight:bold;">Sotuvda (Spawn bo\'lgan narsalar):</div>';
+  
+  var hasSpawn = false;
+  S.activeSpawns.forEach(function(spawn, idx) {
+    var item = ALL_SHOP_ITEMS.find(x => x.id === spawn.id);
+    if(!item) return;
+    
+    if(Date.now() > spawn.expire) return; 
+    hasSpawn = true;
+
+    var isOwned = S.shopInv.some(x => x.id === item.id && x.type === "own");
+    
+    h += '<div class="shop-item">';
+    h += '<div class="shop-title"><span>'+item.name+'</span><span class="income-text">+$'+f(item.baseInc)+' / sek</span></div>';
+    
+    if(S.admin) {
+      var timeLeft = Math.floor((spawn.expire - Date.now()) / 60000);
+      h += '<div class="spawn-timer">Admin ko\'rinishi: Yana ' + timeLeft + ' daqiqa turadi</div>';
+    }
+
+    if(isOwned) {
+      h += '<div class="mu" style="text-align:center; margin-top:5px; color:var(--ac)">✅ Sizda bor (Ishlayapti)</div>';
+    } else {
+      var rentInc = item.baseInc * 0.2;
+      h += '<div class="bt" style="margin-top:8px;">';
+      h += '<button data-a="buyShop" data-id="'+item.id+'" data-type="rent" data-idx="'+idx+'" style="background:var(--blue)">Ijaraga olish<br><small>$'+f(item.rentCost)+' (Sek: $'+f(rentInc)+')</small></button>';
+      h += '<button data-a="buyShop" data-id="'+item.id+'" data-type="own" data-idx="'+idx+'" style="background:var(--ac)">O\'zimga sotib olish<br><small>$'+f(item.buyCost)+' (Sek: $'+f(item.baseInc)+')</small></button>';
+      h += '</div>';
+    }
+    
+    if(S.admin) {
+      h += '<button class="pb" style="margin-top:5px; background:var(--rd)" data-a="cancelSpawn" data-idx="'+idx+'">Spawnni bekor qilish</button>';
+    }
+    h += '</div>';
+  });
+
+  if(!hasSpawn) {
+    h += '<div class="card mu" style="text-align:center; padding:20px;">Hozircha sotuvda narsa yo\'q. Yangi narsalar paydo bo\'lishini kuting yoki admin qo\'shishini kuting.</div>';
+  }
+
+  return h;
+}
+
 function gambleView(){
   var h = '<div class="card" style="text-align:center; border: 2px solid '+(S.luck>=100?'gold':'var(--bar)')+'"><h4 style="font-size:20px;color:'+(S.luck>=100?'gold':'var(--tx)')+'">🎰 Maxsus Kazino</h4>';
   if(S.luck <= 0) { h += '<div class="mu" style="margin:20px 0; font-size:16px;">Kazinoda o\'ynash uchun sizga <b>Omad</b> kerak. Hozircha sizda: <b>'+S.luck+' / 100</b></div></div>'; return h; }
@@ -461,9 +570,35 @@ function port(){
   
   if(S.admin) {
     h+='<div class="card admin-box"><h4 style="color:var(--rd)">👑 Super Admin Panel</h4>';
-    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">🔍 Qidiruv (O\'yinchi IDsi):</div><input class="fi" id="searchAdmin" type="text" placeholder="Masalan: user_12345"><div id="searchResult" class="mu"></div></div>';
+    
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">👥 O\'yinchilar ro\'yxati (Pul berish/Ayirish):</div>';
+    if(LEADERBOARD.length > 0) {
+      LEADERBOARD.forEach(function(player) {
+        h+='<div class="code-item" style="flex-wrap:wrap; gap:5px;">';
+        h+='<span style="font-weight:bold;">'+player.id+'</span>';
+        h+='<span style="color:var(--ac)">$'+f(player.cash)+'</span>';
+        h+='<div style="width:100%; display:flex; gap:5px; margin-top:5px;">';
+        h+='<input type="number" id="amt_'+player.id+'" placeholder="Miqdor" style="flex:1; padding:4px; border-radius:5px; border:1px solid var(--mu);">';
+        h+='<button onclick="modifyCash(\''+player.id+'\', 1, \'amt_'+player.id+'\')" style="background:var(--ac); color:white; border:none; padding:4px 8px; border-radius:5px;">➕</button>';
+        h+='<button onclick="modifyCash(\''+player.id+'\', -1, \'amt_'+player.id+'\')" style="background:var(--rd); color:white; border:none; padding:4px 8px; border-radius:5px;">➖</button>';
+        h+='</div></div>';
+      });
+    } else {
+      h+='<div class="mu">Hozircha o\'yinchilar yo\'q</div>';
+    }
+    h+='</div>';
+
     h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">🍀 O\'zimga Omad qo\'shish:</div><input class="fi" id="luckAdd" type="number" placeholder="Omad (masalan: 100)"><button class="pb" style="background:var(--rd);margin-bottom:5px;" data-a="addluck">Omad qo\'shish</button></div>';
-    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">➕ Yangi Promokod yaratish:</div><input class="fi" id="newCodeName" placeholder="Kod nomi (masalan: DOST100)"><input class="fi" id="newCodeVal" type="number" placeholder="Pul miqdori ($)"><select class="fi" id="newCodeType"><option value="false">Oddiy (Hamma uchun)</option><option value="true">Maxsus (Faqat Adminlar)</option></select><button class="pb" data-a="createPromo">Promokod qo\'shish</button></div>';
+    
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">➕ Yangi Promokod yaratish:</div><input class="fi" id="newCodeName" placeholder="Kod nomi"><input class="fi" id="newCodeVal" type="number" placeholder="Pul miqdori ($)"><select class="fi" id="newCodeType"><option value="false">Oddiy</option><option value="true">Maxsus</option></select><button class="pb" data-a="createPromo">Promokod qo\'shish</button></div>';
+    
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px; border: 1px solid var(--ac);"><div class="mu" style="margin-bottom:5px;font-weight:bold; color:var(--ac);">📦 Yangi Spawn Qo\'shish:</div>';
+    h+='<select class="fi" id="spawnItem">';
+    ALL_SHOP_ITEMS.forEach(function(it){ h+='<option value="'+it.id+'">'+it.name+' ($'+f(it.buyCost)+')</option>'; });
+    h+='</select>';
+    h+='<input class="fi" id="spawnTime" type="number" placeholder="Necha daqiqa turadi?" value="60">';
+    h+='<button class="pb" style="background:var(--ac);margin-bottom:5px;" data-a="addSpawn">Spawnni Yoqish</button></div>';
+
     h+='<div class="mu" style="margin-bottom:5px; font-weight:bold; color:var(--tx);">Promokodlar:</div>';
     for(var code in GLOBAL_PROMOS) {
       var p = GLOBAL_PROMOS[code];
@@ -493,9 +628,9 @@ function detail(t){
 }
 
 function render(){
-  var T=[["w","💵 Hamyon"],["m","📈 Bozor"],["p","💼 Portfel"],["g","🎰 Omad"]];
+  var T=[["w","💵 Hamyon"],["m","📈 Bozor"],["s","🏭 Do'kon"],["p","💼 Portfel"],["g","🎰 Omad"]];
   document.getElementById("tb").innerHTML=T.map(function(x){return'<button data-a="tab" data-t="'+x[0]+'" class="'+(TAB===x[0]&&!DET?"on":"")+'">'+x[1]+'</button>'}).join("");
-  document.getElementById("app").innerHTML=DET?detail(DET):TAB==="w"?wallet():TAB==="m"?market():TAB==="p"?port():TAB==="g"?gambleView():wallet();
+  document.getElementById("app").innerHTML=DET?detail(DET):TAB==="w"?wallet():TAB==="m"?market():TAB==="s"?shopView():TAB==="p"?port():TAB==="g"?gambleView():wallet();
 }
 
 // --- TUGMALAR BOSILGANDA ---
@@ -527,6 +662,52 @@ document.body.addEventListener("click", function(e){
       }
     } else MSG = "❌ Noto'g'ri kod";
     save(); render();
+  }
+  else if(a === "buyShop") {
+    var itemId = btn.getAttribute("data-id");
+    var buyType = btn.getAttribute("data-type");
+    var spawnIdx = btn.getAttribute("data-idx");
+    var shopItem = ALL_SHOP_ITEMS.find(x => x.id === itemId);
+    
+    if(!shopItem) return;
+    var cost = buyType === "rent" ? shopItem.rentCost : shopItem.buyCost;
+    if(S.cash >= cost) {
+      S.cash -= cost;
+      S.shopInv.push({ id: itemId, type: buyType });
+      S.activeSpawns.splice(spawnIdx, 1);
+      save(); render();
+      alert("🎉 Tabriklaymiz! Siz " + shopItem.name + " ni sotib oldingiz!");
+    } else {
+      alert("❌ Pulingiz yetarli emas!");
+    }
+  }
+  // YANGI: INVENTARDAN BIZNESNI SOTISH
+  else if(a === "sellBusiness") {
+    var invIdx = parseInt(idx);
+    if(S.shopInv[invIdx]) {
+      var inv = S.shopInv[invIdx];
+      var item = ALL_SHOP_ITEMS.find(x => x.id === inv.id);
+      var sellPrice = inv.type === "own" ? item.buyCost : item.rentCost;
+      
+      if(confirm("Rostdan ham " + item.name + " ni $" + f(sellPrice) + " ga sotmoqchimisiz?")) {
+        S.cash += sellPrice;
+        S.shopInv.splice(invIdx, 1); // Inventardan o'chirish
+        save(); render();
+        alert("✅ Muvaffaqiyatli sotildi!");
+      }
+    }
+  }
+  else if(a === "addSpawn" && S.admin) {
+    var itemId = document.getElementById("spawnItem").value;
+    var mins = parseInt(document.getElementById("spawnTime").value) || 60;
+    S.activeSpawns.push({ id: itemId, expire: Date.now() + (mins * 60000) });
+    save(); render();
+    alert("✅ Yangi spawn qo'shildi!");
+  }
+  else if(a === "cancelSpawn" && S.admin) {
+    S.activeSpawns.splice(idx, 1);
+    save(); render();
+    alert("🗑 Spawn bekor qilindi!");
   }
   else if(a === "createPromo" && S.admin) {
     var cName = document.getElementById("newCodeName").value.trim().toUpperCase();
@@ -574,38 +755,49 @@ document.body.addEventListener("click", function(e){
   }
 });
 
-// --- QIDIRUV TIZIMI ---
-document.body.addEventListener("input", function(e){
-  if(e.target.id === "searchAdmin" && DB && S.admin) {
-    var q = e.target.value.trim(); var resEl = document.getElementById("searchResult");
-    if(!q) { resEl.innerHTML = ""; return; }
-    DB.collection("leaderboard").doc(q).get().then(function(doc){
-      if(doc.exists) {
-        var d = doc.data();
-        resEl.innerHTML = '<div style="margin-top:5px; padding:10px; background:var(--ac); color:white; border-radius:5px;"><b>ID:</b> '+q+' <br> <b>Pul:</b> $'+f(d.cash)+' <br><br><input type="number" id="pAmt" placeholder="Miqdor ($)" style="width:100%; padding:8px; margin-bottom:5px; border:none; border-radius:5px;"><button class="pb" style="background:var(--tx); margin-bottom:5px;" onclick="modifyCash(\''+q+'\', 1)">➕ Pul qo\'shish</button><button class="pb" style="background:var(--rd);" onclick="modifyCash(\''+q+'\', -1)">➖ Pul ayirish</button></div>';
-      } else { resEl.innerHTML = "❌ Bunday ID topilmadi"; }
-    }).catch(function(){ resEl.innerHTML = "Xatolik yuz berdi"; });
+// --- DOIMIY DAROMAD VA KLAVIATURA HIMOYASI ---
+setInterval(step, 3000);
+setInterval(function() { 
+  if(S.shopInv && S.shopInv.length > 0) {
+    var now = Date.now();
+    var diffSecs = (now - S.lastTick) / 1000;
+    if(diffSecs > 0) {
+      var totalIncome = 0;
+      S.shopInv.forEach(function(inv) {
+        var item = ALL_SHOP_ITEMS.find(x => x.id === inv.id);
+        if(item) {
+          var inc = item.baseInc;
+          if(inv.type === "rent") inc = item.baseInc * 0.2;
+          totalIncome += inc;
+        }
+      });
+      S.cash += totalIncome * diffSecs;
+      S.lastTick = now;
+      save();
+    }
+  } else {
+    S.lastTick = Date.now();
   }
-});
 
-window.modifyCash = function(uid, dir) {
-  var amt = parseFloat(document.getElementById("pAmt").value);
+  var active = document.activeElement;
+  var isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT");
+  if(!DET && TAB!=="g" && !isTyping) render(); 
+}, 1000); 
+
+// --- GLOBAL PUL O'ZGARTIRISH ---
+window.modifyCash = function(uid, dir, inputId) {
+  var amt = parseFloat(document.getElementById(inputId).value);
   if(isNaN(amt) || amt <= 0) return alert("Miqdorni kiriting!");
   DB.collection("leaderboard").doc(uid).get().then(function(doc){
     if(doc.exists) {
       var current = doc.data().cash || 0; var newCash = dir === 1 ? current + amt : Math.max(0, current - amt);
-      DB.collection("leaderboard").doc(uid).update({cash: newCash}).then(function(){ alert("Muvaffaqiyatli o'zgartirildi!"); document.getElementById("searchAdmin").value = ""; document.getElementById("searchResult").innerHTML = ""; });
+      DB.collection("leaderboard").doc(uid).update({cash: newCash}).then(function(){ 
+        alert("Muvaffaqiyatli o'zgartirildi!"); 
+        document.getElementById(inputId).value = "";
+      });
     }
   });
 };
-
-// --- KLAVIATURA HIMOYASI VA ISHGA TUSHIRISH ---
-setInterval(step, 3000);
-setInterval(function() { 
-  var active = document.activeElement;
-  var isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT");
-  if(!DET && TAB!=="g" && !isTyping) render(); 
-}, 3000); 
 
 save();
 render();
