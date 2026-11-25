@@ -74,11 +74,11 @@ try { if(window.firebase){ firebase.initializeApp(FIREBASE_CONFIG); DB = firebas
 // --- O'YIN MA'LUMOTLARI ---
 var ST=[{t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002},{t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001},{t:"ONN",n:"Oltin Non",p:4.8,v:.02,d:.001},{t:"ZMT",n:"Zamon Texno",p:3.2,v:.05,d:.003},{t:"BHR",n:"Bahor Dori",p:.75,v:.08,d:0},{t:"YLQ",n:"Yoʻl Qurilish",p:5.5,v:.03,d:.0015},{t:"BMW",n:"BMW",p:2500,v:.12,d:0},{t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002}];
 var SM={}; ST.forEach(function(s){SM[s.t]=s});
-var K="aksiya_v18", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
+var K="aksiya_v20", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
 var MY_ID = "user_" + Math.floor(10000 + Math.random() * 90000);
 var LEADERBOARD = [];
 
-// --- DO'KON TIZIMI (Faqat Sotib Olish) ---
+// --- DO'KON TIZIMI (Haqiqiy hayot kabi) ---
 var ALL_SHOP_ITEMS = [
   { id: "farm", name: "🍎 Olma Bog'i", cost: 200000 },
   { id: "factory", name: "🏭 Kiyim Fabrikasi", cost: 1000000 },
@@ -175,28 +175,33 @@ function market(){
   }).join("");
 }
 
-// --- ZAVOD / DO'KON BO'LIMI ---
+// --- ZAVOD / DO'KON BO'LIMI (Haqiqiy hayot kabi) ---
 function shopView(){
-  var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:white;"><h4>🏭 Zavod va Bizneslar</h4><div class="mu" style="color:#cbd5e1">Sotib oling, so\'ngra o\'zingiz xohlagan rejimni tanlang!</div></div>';
+  var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:white;"><h4>🏭 Zavod va Bizneslar</h4><div class="mu" style="color:#cbd5e1">Sotib oling. Keyin xohlasangiz o\'zingiz boshqaring (foyda ko\'p, xarajat ko\'p), xohlasangiz ijaraga bering (foyda kam, xarajat yo\'q).</div></div>';
   
-  h += '<div class="mu" style="margin:10px 0; font-weight:bold;">Sizning Inventaringiz:</div>';
+  h += '<div class="mu" style="margin:10px 0; font-weight:bold;">Sizning Mulkingiz (Inventar):</div>';
   if(S.shopInv.length === 0) {
     h += '<div class="card mu" style="text-align:center; padding:20px;">Hozircha biznesingiz yo\'q. Pastdan sotib oling.</div>';
   } else {
     S.shopInv.forEach(function(inv, index) {
       var item = ALL_SHOP_ITEMS.find(x => x.id === inv.id);
-      var statusText = inv.status === "own" ? "O'zi ishlaydi (1000$/sek)" : (inv.status === "rent" ? "Ijarada (500$/sek)" : "Kutilmoqda (Ishlamayapti)");
-      var netInc = inv.status === "own" ? 500 : (inv.status === "rent" ? 250 : 0);
       
-      h += '<div class="shop-item" style="border-color: ' + (inv.status ? 'var(--ac)' : 'var(--mu)') + ';">';
+      var statusText = inv.status === "own" ? "O'zim boshqaraman" : (inv.status === "rent" ? "Ijaraga berilgan" : "Bo'sh turibdi");
+      
+      // Daromad
+      var grossInc = inv.status === "own" ? 1000 : (inv.status === "rent" ? 500 : 0);
+      var netInc = inv.status === "own" ? 500 : (inv.status === "rent" ? 500 : 0); 
+      // Izoh: O'zim boshqarganda 1000 ishlaydi, lekin 500 xarajat (soliq) ketadi => 500 qoladi.
+      // Ijarada 500 ishlaydi, xarajat yo'q => 500 qoladi.
+      
+      h += '<div class="shop-item" style="border-color: ' + (inv.status === 'own' ? 'var(--ac)' : (inv.status === 'rent' ? 'var(--blue)' : 'var(--mu)')) + ';">';
       h += '<div class="shop-title"><span>'+item.name+'</span><span class="income-text">'+(netInc > 0 ? '+$'+f(netInc)+' / sek' : '0$/sek')+'</span></div>';
       h += '<div class="mu" style="margin:4px 0;">Holat: <b>'+statusText+'</b></div>';
       
-      // Agar sotib olingan bo'lsa, lekin rejim tanlanmagan bo'lsa (status yo'q)
       if(!inv.status) {
         h += '<div class="bt" style="margin-top:8px;">';
-        h += '<button data-a="setMode" data-idx="'+index+'" data-mode="rent" style="background:var(--blue)">Ijaraga berish<br><small>+250$/sek</small></button>';
-        h += '<button data-a="setMode" data-idx="'+index+'" data-mode="own" style="background:var(--ac)">O\'zim ishlash<br><small>+500$/sek</small></button>';
+        h += '<button data-a="setMode" data-idx="'+index+'" data-mode="rent" style="background:var(--blue)">Ijaraga berish<br><small>Toza foyda: +500$/sek</small></button>';
+        h += '<button data-a="setMode" data-idx="'+index+'" data-mode="own" style="background:var(--ac)">O\'zim boshqarish<br><small>Soliqdan keyin: +500$/sek</small></button>';
         h += '</div>';
       } else {
         h += '<button class="pb s" style="margin-top:5px;" data-a="sellBusiness" data-idx="'+index+'">Sotish ($' + f(item.cost) + ' ga)</button>';
@@ -292,12 +297,7 @@ function port(){
     
     h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px;"><div class="mu" style="margin-bottom:5px;font-weight:bold;">➕ Yangi Promokod yaratish:</div><input class="fi" id="newCodeName" placeholder="Kod nomi"><input class="fi" id="newCodeVal" type="number" placeholder="Pul miqdori ($)"><select class="fi" id="newCodeType"><option value="false">Oddiy</option><option value="true">Maxsus</option></select><button class="pb" data-a="createPromo">Promokod qo\'shish</button></div>';
     
-    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px; border: 1px solid var(--ac);"><div class="mu" style="margin-bottom:5px;font-weight:bold; color:var(--ac);">📦 Yangi Spawn Qo\'shish:</div>';
-    h+='<select class="fi" id="spawnItem">';
-    ALL_SHOP_ITEMS.forEach(function(it){ h+='<option value="'+it.id+'">'+it.name+' ($'+f(it.cost)+')</option>'; });
-    h+='</select>';
-    h+='<input class="fi" id="spawnTime" type="number" placeholder="Necha daqiqa turadi?" value="60">';
-    h+='<button<!DOCTYPE html>
+    h+='<div style="background:var(--bar);padding:10px;border-radius:10px;margin-bottom:10px; border: 1px solid var(--ac);"><div class="mu" style="margin-bottom:5px;font-weig<!DOCTYPE html>
 <html lang="uz">
 <head>
 <meta charset="utf-8">
@@ -373,11 +373,11 @@ try { if(window.firebase){ firebase.initializeApp(FIREBASE_CONFIG); DB = firebas
 // --- O'YIN MA'LUMOTLARI ---
 var ST=[{t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002},{t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001},{t:"ONN",n:"Oltin Non",p:4.8,v:.02,d:.001},{t:"ZMT",n:"Zamon Texno",p:3.2,v:.05,d:.003},{t:"BHR",n:"Bahor Dori",p:.75,v:.08,d:0},{t:"YLQ",n:"Yoʻl Qurilish",p:5.5,v:.03,d:.0015},{t:"BMW",n:"BMW",p:2500,v:.12,d:0},{t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002}];
 var SM={}; ST.forEach(function(s){SM[s.t]=s});
-var K="aksiya_v18", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
+var K="aksiya_v20", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
 var MY_ID = "user_" + Math.floor(10000 + Math.random() * 90000);
 var LEADERBOARD = [];
 
-// --- DO'KON TIZIMI (Faqat Sotib Olish) ---
+// --- DO'KON TIZIMI (Haqiqiy hayot kabi) ---
 var ALL_SHOP_ITEMS = [
   { id: "farm", name: "🍎 Olma Bog'i", cost: 200000 },
   { id: "factory", name: "🏭 Kiyim Fabrikasi", cost: 1000000 },
@@ -474,28 +474,33 @@ function market(){
   }).join("");
 }
 
-// --- ZAVOD / DO'KON BO'LIMI ---
+// --- ZAVOD / DO'KON BO'LIMI (Haqiqiy hayot kabi) ---
 function shopView(){
-  var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:white;"><h4>🏭 Zavod va Bizneslar</h4><div class="mu" style="color:#cbd5e1">Sotib oling, so\'ngra o\'zingiz xohlagan rejimni tanlang!</div></div>';
+  var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:white;"><h4>🏭 Zavod va Bizneslar</h4><div class="mu" style="color:#cbd5e1">Sotib oling. Keyin xohlasangiz o\'zingiz boshqaring (foyda ko\'p, xarajat ko\'p), xohlasangiz ijaraga bering (foyda kam, xarajat yo\'q).</div></div>';
   
-  h += '<div class="mu" style="margin:10px 0; font-weight:bold;">Sizning Inventaringiz:</div>';
+  h += '<div class="mu" style="margin:10px 0; font-weight:bold;">Sizning Mulkingiz (Inventar):</div>';
   if(S.shopInv.length === 0) {
     h += '<div class="card mu" style="text-align:center; padding:20px;">Hozircha biznesingiz yo\'q. Pastdan sotib oling.</div>';
   } else {
     S.shopInv.forEach(function(inv, index) {
       var item = ALL_SHOP_ITEMS.find(x => x.id === inv.id);
-      var statusText = inv.status === "own" ? "O'zi ishlaydi (1000$/sek)" : (inv.status === "rent" ? "Ijarada (500$/sek)" : "Kutilmoqda (Ishlamayapti)");
-      var netInc = inv.status === "own" ? 500 : (inv.status === "rent" ? 250 : 0);
       
-      h += '<div class="shop-item" style="border-color: ' + (inv.status ? 'var(--ac)' : 'var(--mu)') + ';">';
+      var statusText = inv.status === "own" ? "O'zim boshqaraman" : (inv.status === "rent" ? "Ijaraga berilgan" : "Bo'sh turibdi");
+      
+      // Daromad
+      var grossInc = inv.status === "own" ? 1000 : (inv.status === "rent" ? 500 : 0);
+      var netInc = inv.status === "own" ? 500 : (inv.status === "rent" ? 500 : 0); 
+      // Izoh: O'zim boshqarganda 1000 ishlaydi, lekin 500 xarajat (soliq) ketadi => 500 qoladi.
+      // Ijarada 500 ishlaydi, xarajat yo'q => 500 qoladi.
+      
+      h += '<div class="shop-item" style="border-color: ' + (inv.status === 'own' ? 'var(--ac)' : (inv.status === 'rent' ? 'var(--blue)' : 'var(--mu)')) + ';">';
       h += '<div class="shop-title"><span>'+item.name+'</span><span class="income-text">'+(netInc > 0 ? '+$'+f(netInc)+' / sek' : '0$/sek')+'</span></div>';
       h += '<div class="mu" style="margin:4px 0;">Holat: <b>'+statusText+'</b></div>';
       
-      // Agar sotib olingan bo'lsa, lekin rejim tanlanmagan bo'lsa (status yo'q)
       if(!inv.status) {
         h += '<div class="bt" style="margin-top:8px;">';
-        h += '<button data-a="setMode" data-idx="'+index+'" data-mode="rent" style="background:var(--blue)">Ijaraga berish<br><small>+250$/sek</small></button>';
-        h += '<button data-a="setMode" data-idx="'+index+'" data-mode="own" style="background:var(--ac)">O\'zim ishlash<br><small>+500$/sek</small></button>';
+        h += '<button data-a="setMode" data-idx="'+index+'" data-mode="rent" style="background:var(--blue)">Ijaraga berish<br><small>Toza foyda: +500$/sek</small></button>';
+        h += '<button data-a="setMode" data-idx="'+index+'" data-mode="own" style="background:var(--ac)">O\'zim boshqarish<br><small>Soliqdan keyin: +500$/sek</small></button>';
         h += '</div>';
       } else {
         h += '<button class="pb s" style="margin-top:5px;" data-a="sellBusiness" data-idx="'+index+'">Sotish ($' + f(item.cost) + ' ga)</button>';
@@ -673,7 +678,7 @@ document.body.addEventListener("click", function(e){
       S.shopInv.push({ id: itemId, status: null }); // Status null - rejim tanlanmagan
       S.activeSpawns.splice(spawnIdx, 1);
       save(); render();
-      alert("🎉 Sotib olindi! Endi Inventarga kirib, rejimni tanlang.");
+      alert("🎉 Sotib olindi! Endi Inventarga kirib, xohlasangiz o'zingiz boshqaring, xohlasangiz ijaraga bering.");
     } else {
       alert("❌ Pulingiz yetarli emas!");
     }
@@ -683,7 +688,7 @@ document.body.addEventListener("click", function(e){
     if(S.shopInv[invIdx]) {
       S.shopInv[invIdx].status = mode; // rent yoki own
       save(); render();
-      alert("✅ Rejim o'zgartirildi: " + (mode === "rent" ? "Ijarada" : "O'zi ishlaydi"));
+      alert("✅ Rejim o'zgartirildi: " + (mode === "rent" ? "Ijaraga berildi (Toza foyda 500)" : "O'zim boshqaraman (Soliqdan keyin 500)"));
     }
   }
   else if(a === "sellBusiness") {
@@ -769,11 +774,10 @@ setInterval(function() {
       var totalIncome = 0;
       S.shopInv.forEach(function(inv) {
         if(inv.status === "own") {
-          totalIncome += 1000 * 0.5; // O'zi ishlaydi: 1000 dan 50% = 500
+          totalIncome += 500; // O'zi ishlaydi: 1000 - 50% soliq = 500
         } else if(inv.status === "rent") {
-          totalIncome += 500 * 0.5; // Ijarada: 500 dan 50% = 250
+          totalIncome += 500; // Ijarada: 500 toza foyda
         }
-        // Agar status null bo'lsa, ishlamaydi, 0 qo'shiladi
       });
       S.cash += totalIncome * diffSecs;
       S.lastTick = now;
