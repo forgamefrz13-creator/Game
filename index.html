@@ -6,7 +6,7 @@
 <title>Aksiya O'yini 🏭</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%8E%B0%3C/text%3E%3C/svg%3E">
 <style>
-:root{--bg:#f4f7f5;--card:#fff;--tx:#18231d;--mu:#6b7a72;--ac:#16a34a;--rd:#dc2626;--bar:#e3e9e5;--blue:#2563eb;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{--bg:#f4f7f5;--card:#fff;--tx:#18231d;--mu:#6b7a72;--ac:#16a34a;--rd:#dc2626;--bar:#e3e9e5;--blue:#2563eb;--purple:#8b5cf6;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1511;--card:#17211b;--tx:#e8f1ec;--mu:#8fa196;--ac:#34d399;--rd:#f87171;--bar:#26332b;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0e1511;--card:#17211b;--tx:#e8f1ec;--mu:#8fa196;--ac:#34d399;--rd:#f87171;--bar:#26332b;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -59,6 +59,16 @@ h4{margin:0 0 2px;font-size:15px}
 .shop-title { font-weight: bold; font-size: 15px; display: flex; justify-content: space-between; }
 .income-text { color: var(--ac); font-weight: 800; font-size: 13px; }
 .spawn-timer { font-size: 11px; color: var(--rd); font-weight: bold; }
+
+/* Repair Report */
+.repair-report { background: #f8f9fa; border: 1px solid var(--bar); border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 12px; max-height: 200px; overflow-y: auto; }
+.report-item { border-bottom: 1px dashed var(--bar); padding-bottom: 5px; margin-bottom: 5px; }
+.report-item:last-child { border-bottom: none; }
+
+/* Upgrade UI */
+.upg-container { display:flex; flex-direction:column; align-items:center; justify-content:center; margin:20px 0; }
+.upg-wheel { width:150px; height:150px; border-radius:50%; border: 5px dashed var(--purple); display:flex; align-items:center; justify-content:center; position:relative; background:var(--bg); transition: transform 2s ease-out;}
+.upg-text { font-weight:bold; color:var(--purple); font-size:14px; text-align:center;}
 </style>
 </head>
 <body>
@@ -78,11 +88,23 @@ try { if(window.firebase){ firebase.initializeApp(FIREBASE_CONFIG); DB = firebas
 // --- O'YIN MA'LUMOTLARI ---
 var ST=[{t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002},{t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001},{t:"ONN",n:"Oltin Non",p:4.8,v:.02,d:.001},{t:"ZMT",n:"Zamon Texno",p:3.2,v:.05,d:.003},{t:"BHR",n:"Bahor Dori",p:.75,v:.08,d:0},{t:"YLQ",n:"Yoʻl Qurilish",p:5.5,v:.03,d:.0015},{t:"BMW",n:"BMW",p:2500,v:.12,d:0},{t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002}];
 var SM={}; ST.forEach(function(s){SM[s.t]=s});
-var K="aksiya_v22", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
+var K="aksiya_v28", S=null, TAB="w", DET=null, MSG="", isSpinning=false, REPAIR_LOG="";
 var MY_ID = "user_" + Math.floor(10000 + Math.random() * 90000);
 var LEADERBOARD = [];
 
-// --- DO'KON TIZIMI ---
+// YANGI: UPGRADE DARAXTI (Kim kimga aylanishi)
+// Agar 2 ta QSH (2.4$) ni birlashtirsangiz, TZK (yoki boshqa qimmatroq aksiya) beriladi.
+var UPGRADE_TREE = {
+  "BHR": "QSH",   // 2 ta Bahor -> Quyosh
+  "TZK": "ONN",   // 2 ta Tezkor -> Oltin Non
+  "QSH": "ZMT",   // 2 ta Quyosh -> Zamon
+  "ONN": "YLQ",   // 2 ta Oltin Non -> Yo'l
+  "ZMT": "BMW",   // 2 ta Zamon -> BMW
+  "YLQ": "APPL",  // 2 ta Yo'l -> Apple
+  "BMW": "APPL",  // 2 ta BMW -> Apple
+  "APPL": "APPL"  // 2 ta Apple -> Yana Apple (maksimal)
+};
+
 var ALL_SHOP_ITEMS = [
   { id: "farm", name: "🍎 Olma Bog'i", cost: 200000 },
   { id: "factory", name: "🏭 Kiyim Fabrikasi", cost: 1000000 },
@@ -92,10 +114,7 @@ var ALL_SHOP_ITEMS = [
   { id: "space", name: "🚀 Koinot Zavodi", cost: 2000000000 }
 ];
 
-var DEFAULT_SPAWNS = [
-  { id: "farm", expire: Date.now() + 3600000 * 2 },
-  { id: "tech", expire: Date.now() + 3600000 * 5 }
-];
+var DEFAULT_SPAWNS = [{ id: "farm", expire: Date.now() + 3600000 * 2 },{ id: "tech", expire: Date.now() + 3600000 * 5 }];
 
 var DEFAULT_PROMOS = {
   "BONUS50": { reward: 50, active: true, isAdminOnly: false },
@@ -179,7 +198,40 @@ function market(){
   }).join("");
 }
 
-// --- ZAVOD / DO'KON BO'LIMI ---
+// YANGI: UPGRADE BO'LIMI (AKSIYA BERADI)
+function upgView(){
+  var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #4c1d95, #2e1065); color:white;"><h4>⬆️ Aksiyalarni Yangilash (Upgrade)</h4><div class="mu" style="color:#ddd6fe">2 ta bir xil aksiyani birlashtirib, 1 ta yangi (qimmatroq) aksiya oling!</div></div>';
+  
+  var winChance = Math.min(S.luck, 100);
+  h += '<div class="card" style="text-align:center; padding:10px;">';
+  h += '<div class="mu" style="font-weight:bold; color:var(--purple)">Sizning Omadingiz: '+S.luck+' / 100 🍀</div>';
+  h += '<div class="mu" style="margin-top:5px;">Upgrade muvaffaqiyatli bo\'lish ehtimoli: <b style="color:var(--ac)">'+winChance+'%</b></div>';
+  if (winChance === 100) h += '<div style="font-size:12px; color:var(--ac); font-weight:bold; margin-top:5px;">✅ 100% Kafolatlangan!</div>';
+  h += '</div>';
+
+  h += '<div class="card"><h4>Inventardagi aksiyalar:</h4>';
+  var hasStocks = false;
+  for(var t in S.hold) {
+    if(S.hold[t].sh >= 2) {
+      hasStocks = true;
+      var nextT = UPGRADE_TREE[t] || "APPL"; // Keyingi aksiya nima bo'lishi
+      var nextName = SM[nextT] ? SM[nextT].n : "Noma'lum";
+      
+      h += '<div class="row" style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--bar); flex-direction:column; align-items:flex-start;">';
+      h += '<div style="display:flex; align-items:center; gap:10px; width:100%;">'+coin(t,40)+'<div><b>'+SM[t].n+'</b><div class="mu">Sizda: '+S.hold[t].sh.toFixed(0)+' ta</div></div></div>';
+      h += '<div class="mu" style="margin:5px 0;">Natija: <b>'+nextName+'</b></div>';
+      h += '<button data-a="doUpgrade" data-t="'+t+'" style="background:var(--purple); color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; width:100%;">Upgrade Qilish</button>';
+      h += '</div>';
+    }
+  }
+  if(!hasStocks) {
+    h += '<div class="mu" style="text-align:center; padding:20px;">Sizda kamida 2 ta bir xil aksiya bo\'lishi kerak. Bozorga kirib sotib oling.</div>';
+  }
+  h += '</div>';
+
+  return h;
+}
+
 function shopView(){
   var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:white;"><h4>🏭 Zavod va Bizneslar</h4><div class="mu" style="color:#cbd5e1">Sotib oling, so\'ngra o\'zingiz xohlagan rejimni tanlang!</div></div>';
   
@@ -189,7 +241,7 @@ function shopView(){
   } else {
     S.shopInv.forEach(function(inv, index) {
       var item = ALL_SHOP_ITEMS.find(x => x.id === inv.id);
-      if(!item) return; // XATO OLDINI OLISH
+      if(!item) return; 
       
       var statusText = inv.status === "own" ? "O'zim boshqaraman" : (inv.status === "rent" ? "Ijaraga berilgan" : "Bo'sh turibdi");
       var netInc = inv.status === "own" ? 500 : (inv.status === "rent" ? 500 : 0); 
@@ -253,59 +305,16 @@ function shopView(){
 
 function gambleView(){
   var h = '<div class="card" style="text-align:center; border: 2px solid '+(S.luck>=100?'gold':'var(--bar)')+'"><h4 style="font-size:20px;color:'+(S.luck>=100?'gold':'var(--tx)')+'">🎰 Maxsus Kazino</h4>';
-  if(S.luck <= 0) { h += '<div class="mu" style="margin:20px 0; font-size:16px;">Kazinoda o\'ynash uchun sizga <b>Omad</b> kerak. Hozircha sizda: <b>'+S.luck+' / 100</b></div></div>'; return h; }
+  
+  if(S.luck <= 0) { 
+    h += '<div class="mu" style="margin:20px 0; font-size:16px;">Kazinoda o\'ynash uchun sizga <b>Omad</b> kerak. Hozircha sizda: <b>'+S.luck+' / 100</b></div></div>'; 
+    return h; 
+  }
+  
   var winChance = Math.min(S.luck, 100);
-  h += '<div class="mu" style="margin-bottom:20px; color:var(--ac); font-weight:bold;">Yutish imkoniyatingiz: '+winChance+'%</div>';
+  h += '<div class="mu" style="margin-bottom:20px; color:var(--ac); font-weight:bold;">Yutish imkoniyatingiz: '+winChance+'% '+(winChance===100?'(Kafolatlangan!)':'')+'</div>';
   h += '<div class="wheel-pointer">🔻</div><div id="wheel" class="wheel-container"><div class="wheel-center">$</div></div>';
-  h += '<div class="mu" style="margin-top:20px">Pul tikish (Min: $10)</div>';
-  h += '<input class="fi" id="betAmount" type="number" placeholder="Tikiladigan miqdor ($)" style="text-align:center;font-size:18px;">';
-  h += '<button class="pb" style="padding:16px;font-size:18px;background:linear-gradient(135deg, #f59e0b, #d97706);color:white;" data-a="spin">Aylantirish 🎡</button>';
-  h += '<div class="msg" id="gambleMsg" style="text-align:center;font-size:16px;margin-top:15px;min-height:24px;"></div></div>';
-  return h;
-}
-
-// --- SUPER ADMIN PANEL (PORTFEL) ---
-function port(){
-  var k=Object.keys(S.hold), h="";
-  h+=k.length?k.map(function(t){
-    var H=S.hold[t], val=H.sh*S.px[t];
-    return '<div class="card" data-open="'+t+'"><div class="row"><div style="display:flex;gap:10px;align-items:center">'+coin(t,40)+'<div><b>'+SM[t].n+'</b><div class="mu">'+H.sh.toFixed(3)+' ta</div></div></div><b>$'+f(val)+'</b></div></div>';
-  }).join(""):'<div class="card mu" style="text-align:center">Aksiyangiz yoʻq.</div>';
-  
-  h+='<div class="card"><h4>🎟 Promokod</h4><input class="fi" id="pi" placeholder="Promokodni kiriting" autocapitalize="characters"><button class="pb" data-a="pc">Qoʻllash</button><div class="msg">'+MSG+'</div></div>';
-  
-  if(S.admin) {
-    h+='<div class="card admin-box"><h4 style="color:var(--rd)">👑 Super Admin Panel</h4>';
-    
-    // 1. O'YINCHILARNI BOSHQARISH
-    h+='<button class="acc-btn" onclick="toggleAcc(this)">👥 O\'yinchilarni boshqarish <span>▼</span></button>';
-    h+='<div class="acc-content">';
-    if(LEADERBOARD.length > 0) {
-      LEADERBOARD.forEach(function(player) {
-        h+='<div class="code-item" style="flex-wrap:wrap; gap:5px; flex-direction:column; align-items:flex-start;">';
-        h+='<div style="width:100%; display:flex; justify-content:space-between;">';
-        h+='<span style="font-weight:bold;">'+player.id+'</span>';
-        h+='<span style="color:var(--ac)">$'+f(player.cash)+' | 🍀'+ (player.luck||0) +'</span>';
-        h+='</div>';
-        h+='<div style="width:100%; display:flex; gap:5px; margin-top:5px;">';
-        h+='<input type="number" id="amt_'+player.id+'" placeholder="Pul" style="flex:1; padding:4px; border-radius:5px; border:1px solid var(--mu);">';
-        h+='<button onclick="modifyCash(\''+player.id+'\', 1, \'amt_'+player.id+'\')" style="background:var(--ac); color:white; border:none; padding:4px 8px; border-radius:5px;">➕</button>';
-        h+='<button onclick="modifyCash(\''+player.id+'\', -1, \'amt_'+player.id+'\')" style="background:var(--rd); color:white; border:none; padding:4px 8px; border-radius:5px;">➖</button>';
-        h+='</div>';
-        h+='<div style="width:100%; display:flex; gap:5px; margin-top:5px;">';
-        h+='<input type="number" id="luck_'+player.id+'" placeholder="Omad" style="flex:1; padding:4px; border-radius:5px; border:1px solid var(--mu);">';
-        h+='<button onclick="modifyLuck(\''+player.id+'\', \'luck_'+player.id+'\')" style="background:var(--blue); color:white; border:none; padding:4px 8px; border-radius:5px;">Omad berish</button>';
-        h+='</div>';
-        h+='</div>';
-      });
-    } else { h+='<div class="mu">Hozircha o\'yinchilar yo\'q</div>'; }
-    h+='</div>';
-
-    // 2. BOZOR BOSHQARUVI
-    h+='<button class="acc-btn" onclick="toggleAcc(this)">📈 Bozor va Aksiyalar <span>▼</span></button>';
-    h+='<div class="acc-content">';
-    ST.forEach(function(st) {
-      h+='<div class="code-item" styl<!DOCTYPE html>
+  h += '<div class="mu" style="margin-top:20px">Pul tikish (Min: $1<!DOCTYPE html>
 <html lang="uz">
 <head>
 <meta charset="utf-8">
@@ -313,7 +322,7 @@ function port(){
 <title>Aksiya O'yini 🏭</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%8E%B0%3C/text%3E%3C/svg%3E">
 <style>
-:root{--bg:#f4f7f5;--card:#fff;--tx:#18231d;--mu:#6b7a72;--ac:#16a34a;--rd:#dc2626;--bar:#e3e9e5;--blue:#2563eb;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{--bg:#f4f7f5;--card:#fff;--tx:#18231d;--mu:#6b7a72;--ac:#16a34a;--rd:#dc2626;--bar:#e3e9e5;--blue:#2563eb;--purple:#8b5cf6;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1511;--card:#17211b;--tx:#e8f1ec;--mu:#8fa196;--ac:#34d399;--rd:#f87171;--bar:#26332b;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0e1511;--card:#17211b;--tx:#e8f1ec;--mu:#8fa196;--ac:#34d399;--rd:#f87171;--bar:#26332b;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -366,6 +375,16 @@ h4{margin:0 0 2px;font-size:15px}
 .shop-title { font-weight: bold; font-size: 15px; display: flex; justify-content: space-between; }
 .income-text { color: var(--ac); font-weight: 800; font-size: 13px; }
 .spawn-timer { font-size: 11px; color: var(--rd); font-weight: bold; }
+
+/* Repair Report */
+.repair-report { background: #f8f9fa; border: 1px solid var(--bar); border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 12px; max-height: 200px; overflow-y: auto; }
+.report-item { border-bottom: 1px dashed var(--bar); padding-bottom: 5px; margin-bottom: 5px; }
+.report-item:last-child { border-bottom: none; }
+
+/* Upgrade UI */
+.upg-container { display:flex; flex-direction:column; align-items:center; justify-content:center; margin:20px 0; }
+.upg-wheel { width:150px; height:150px; border-radius:50%; border: 5px dashed var(--purple); display:flex; align-items:center; justify-content:center; position:relative; background:var(--bg); transition: transform 2s ease-out;}
+.upg-text { font-weight:bold; color:var(--purple); font-size:14px; text-align:center;}
 </style>
 </head>
 <body>
@@ -385,11 +404,23 @@ try { if(window.firebase){ firebase.initializeApp(FIREBASE_CONFIG); DB = firebas
 // --- O'YIN MA'LUMOTLARI ---
 var ST=[{t:"QSH",n:"Quyosh Energiya",p:2.4,v:.035,d:.002},{t:"TZK",n:"Tezkor Yetkazish",p:1.1,v:.06,d:.001},{t:"ONN",n:"Oltin Non",p:4.8,v:.02,d:.001},{t:"ZMT",n:"Zamon Texno",p:3.2,v:.05,d:.003},{t:"BHR",n:"Bahor Dori",p:.75,v:.08,d:0},{t:"YLQ",n:"Yoʻl Qurilish",p:5.5,v:.03,d:.0015},{t:"BMW",n:"BMW",p:2500,v:.12,d:0},{t:"APPL",n:"Apple (iPhone)",p:3000,v:.08,d:.002}];
 var SM={}; ST.forEach(function(s){SM[s.t]=s});
-var K="aksiya_v22", S=null, TAB="w", DET=null, MSG="", isSpinning=false;
+var K="aksiya_v28", S=null, TAB="w", DET=null, MSG="", isSpinning=false, REPAIR_LOG="";
 var MY_ID = "user_" + Math.floor(10000 + Math.random() * 90000);
 var LEADERBOARD = [];
 
-// --- DO'KON TIZIMI ---
+// YANGI: UPGRADE DARAXTI (Kim kimga aylanishi)
+// Agar 2 ta QSH (2.4$) ni birlashtirsangiz, TZK (yoki boshqa qimmatroq aksiya) beriladi.
+var UPGRADE_TREE = {
+  "BHR": "QSH",   // 2 ta Bahor -> Quyosh
+  "TZK": "ONN",   // 2 ta Tezkor -> Oltin Non
+  "QSH": "ZMT",   // 2 ta Quyosh -> Zamon
+  "ONN": "YLQ",   // 2 ta Oltin Non -> Yo'l
+  "ZMT": "BMW",   // 2 ta Zamon -> BMW
+  "YLQ": "APPL",  // 2 ta Yo'l -> Apple
+  "BMW": "APPL",  // 2 ta BMW -> Apple
+  "APPL": "APPL"  // 2 ta Apple -> Yana Apple (maksimal)
+};
+
 var ALL_SHOP_ITEMS = [
   { id: "farm", name: "🍎 Olma Bog'i", cost: 200000 },
   { id: "factory", name: "🏭 Kiyim Fabrikasi", cost: 1000000 },
@@ -399,10 +430,7 @@ var ALL_SHOP_ITEMS = [
   { id: "space", name: "🚀 Koinot Zavodi", cost: 2000000000 }
 ];
 
-var DEFAULT_SPAWNS = [
-  { id: "farm", expire: Date.now() + 3600000 * 2 },
-  { id: "tech", expire: Date.now() + 3600000 * 5 }
-];
+var DEFAULT_SPAWNS = [{ id: "farm", expire: Date.now() + 3600000 * 2 },{ id: "tech", expire: Date.now() + 3600000 * 5 }];
 
 var DEFAULT_PROMOS = {
   "BONUS50": { reward: 50, active: true, isAdminOnly: false },
@@ -486,7 +514,40 @@ function market(){
   }).join("");
 }
 
-// --- ZAVOD / DO'KON BO'LIMI ---
+// YANGI: UPGRADE BO'LIMI (AKSIYA BERADI)
+function upgView(){
+  var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #4c1d95, #2e1065); color:white;"><h4>⬆️ Aksiyalarni Yangilash (Upgrade)</h4><div class="mu" style="color:#ddd6fe">2 ta bir xil aksiyani birlashtirib, 1 ta yangi (qimmatroq) aksiya oling!</div></div>';
+  
+  var winChance = Math.min(S.luck, 100);
+  h += '<div class="card" style="text-align:center; padding:10px;">';
+  h += '<div class="mu" style="font-weight:bold; color:var(--purple)">Sizning Omadingiz: '+S.luck+' / 100 🍀</div>';
+  h += '<div class="mu" style="margin-top:5px;">Upgrade muvaffaqiyatli bo\'lish ehtimoli: <b style="color:var(--ac)">'+winChance+'%</b></div>';
+  if (winChance === 100) h += '<div style="font-size:12px; color:var(--ac); font-weight:bold; margin-top:5px;">✅ 100% Kafolatlangan!</div>';
+  h += '</div>';
+
+  h += '<div class="card"><h4>Inventardagi aksiyalar:</h4>';
+  var hasStocks = false;
+  for(var t in S.hold) {
+    if(S.hold[t].sh >= 2) {
+      hasStocks = true;
+      var nextT = UPGRADE_TREE[t] || "APPL"; // Keyingi aksiya nima bo'lishi
+      var nextName = SM[nextT] ? SM[nextT].n : "Noma'lum";
+      
+      h += '<div class="row" style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--bar); flex-direction:column; align-items:flex-start;">';
+      h += '<div style="display:flex; align-items:center; gap:10px; width:100%;">'+coin(t,40)+'<div><b>'+SM[t].n+'</b><div class="mu">Sizda: '+S.hold[t].sh.toFixed(0)+' ta</div></div></div>';
+      h += '<div class="mu" style="margin:5px 0;">Natija: <b>'+nextName+'</b></div>';
+      h += '<button data-a="doUpgrade" data-t="'+t+'" style="background:var(--purple); color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; width:100%;">Upgrade Qilish</button>';
+      h += '</div>';
+    }
+  }
+  if(!hasStocks) {
+    h += '<div class="mu" style="text-align:center; padding:20px;">Sizda kamida 2 ta bir xil aksiya bo\'lishi kerak. Bozorga kirib sotib oling.</div>';
+  }
+  h += '</div>';
+
+  return h;
+}
+
 function shopView(){
   var h = '<div class="card" style="text-align:center; background:linear-gradient(135deg, #1e293b, #0f172a); color:white;"><h4>🏭 Zavod va Bizneslar</h4><div class="mu" style="color:#cbd5e1">Sotib oling, so\'ngra o\'zingiz xohlagan rejimni tanlang!</div></div>';
   
@@ -496,7 +557,7 @@ function shopView(){
   } else {
     S.shopInv.forEach(function(inv, index) {
       var item = ALL_SHOP_ITEMS.find(x => x.id === inv.id);
-      if(!item) return; // XATO OLDINI OLISH
+      if(!item) return; 
       
       var statusText = inv.status === "own" ? "O'zim boshqaraman" : (inv.status === "rent" ? "Ijaraga berilgan" : "Bo'sh turibdi");
       var netInc = inv.status === "own" ? 500 : (inv.status === "rent" ? 500 : 0); 
@@ -560,9 +621,14 @@ function shopView(){
 
 function gambleView(){
   var h = '<div class="card" style="text-align:center; border: 2px solid '+(S.luck>=100?'gold':'var(--bar)')+'"><h4 style="font-size:20px;color:'+(S.luck>=100?'gold':'var(--tx)')+'">🎰 Maxsus Kazino</h4>';
-  if(S.luck <= 0) { h += '<div class="mu" style="margin:20px 0; font-size:16px;">Kazinoda o\'ynash uchun sizga <b>Omad</b> kerak. Hozircha sizda: <b>'+S.luck+' / 100</b></div></div>'; return h; }
+  
+  if(S.luck <= 0) { 
+    h += '<div class="mu" style="margin:20px 0; font-size:16px;">Kazinoda o\'ynash uchun sizga <b>Omad</b> kerak. Hozircha sizda: <b>'+S.luck+' / 100</b></div></div>'; 
+    return h; 
+  }
+  
   var winChance = Math.min(S.luck, 100);
-  h += '<div class="mu" style="margin-bottom:20px; color:var(--ac); font-weight:bold;">Yutish imkoniyatingiz: '+winChance+'%</div>';
+  h += '<div class="mu" style="margin-bottom:20px; color:var(--ac); font-weight:bold;">Yutish imkoniyatingiz: '+winChance+'% '+(winChance===100?'(Kafolatlangan!)':'')+'</div>';
   h += '<div class="wheel-pointer">🔻</div><div id="wheel" class="wheel-container"><div class="wheel-center">$</div></div>';
   h += '<div class="mu" style="margin-top:20px">Pul tikish (Min: $10)</div>';
   h += '<input class="fi" id="betAmount" type="number" placeholder="Tikiladigan miqdor ($)" style="text-align:center;font-size:18px;">';
@@ -571,7 +637,6 @@ function gambleView(){
   return h;
 }
 
-// --- SUPER ADMIN PANEL (PORTFEL) ---
 function port(){
   var k=Object.keys(S.hold), h="";
   h+=k.length?k.map(function(t){
@@ -584,7 +649,6 @@ function port(){
   if(S.admin) {
     h+='<div class="card admin-box"><h4 style="color:var(--rd)">👑 Super Admin Panel</h4>';
     
-    // 1. O'YINCHILARNI BOSHQARISH
     h+='<button class="acc-btn" onclick="toggleAcc(this)">👥 O\'yinchilarni boshqarish <span>▼</span></button>';
     h+='<div class="acc-content">';
     if(LEADERBOARD.length > 0) {
@@ -608,7 +672,6 @@ function port(){
     } else { h+='<div class="mu">Hozircha o\'yinchilar yo\'q</div>'; }
     h+='</div>';
 
-    // 2. BOZOR BOSHQARUVI
     h+='<button class="acc-btn" onclick="toggleAcc(this)">📈 Bozor va Aksiyalar <span>▼</span></button>';
     h+='<div class="acc-content">';
     ST.forEach(function(st) {
@@ -622,7 +685,6 @@ function port(){
     h+='<div class="bt"><button onclick="marketEvent(1.25)">📈 Bozorni ko\'tarish</button><button class="s" onclick="marketEvent(0.75)">📉 Bozorni tushirish</button></div>';
     h+='</div>';
 
-    // 3. SPAWN BOSHQARUVI
     h+='<button class="acc-btn" onclick="toggleAcc(this)">📦 Spawn Boshqaruvi <span>▼</span></button>';
     h+='<div class="acc-content">';
     h+='<div class="mu" style="margin-bottom:5px;">Yangi Spawn:</div>';
@@ -632,7 +694,6 @@ function port(){
     h+='<input class="fi" id="spawnTime" type="number" placeholder="Necha daqiqa turadi?" value="60">';
     h+='<button class="pb" style="background:var(--ac);margin-bottom:10px;" data-a="addSpawn">Spawnni Yoqish</button></div>';
 
-    // 4. PROMOKODLAR
     h+='<button class="acc-btn" onclick="toggleAcc(this)">🎟 Promokodlar <span>▼</span></button>';
     h+='<div class="acc-content">';
     h+='<div class="mu">Yangi Promokod:</div>';
@@ -650,10 +711,10 @@ function port(){
     }
     h+='</div>';
 
-    // 5. TA'MIRLASH VA TIZIM
     h+='<button class="acc-btn" onclick="toggleAcc(this)">🛠 Ta\'mirlash va Sozlamalar <span>▼</span></button>';
     h+='<div class="acc-content">';
     h+='<button class="pb" style="background:var(--blue); margin-bottom:5px;" data-a="repair">🔧 O\'yinni ta\'mirlash (Repair)</button>';
+    if(REPAIR_LOG) h+=REPAIR_LOG;
     h+='<button class="pb" style="background:var(--ac); margin-bottom:5px;" data-a="sync">🔄 Firestore bilan sinxronlash</button>';
     h+='<button class="pb" style="background:var(--rd); margin-bottom:5px;" data-a="resetGame">💣 O\'yinni to\'liq nolga tushirish</button>';
     h+='</div>';
@@ -668,21 +729,31 @@ function detail(t){
   var o='<button class="bk" data-a="bk">← Orqaga</button>';
   o+='<div class="card"><div class="row"><div style="display:flex;gap:12px;align-items:center">'+coin(t,64)+'<div><b>'+s.n+'</b></div></div></div><div class="n" style="font-size:42px">$'+f(p)+'</div></div>';
   o+='<div class="card"><div class="mu">Sizda bor</div><div class="n" style="font-size:32px">'+sh.toFixed(3)+' ta</div></div>';
-  o+='<div class="card"><div class="mu">Naqd pul: $'+f(S.cash)+'</div><input class="fi" id="bd" type="number" placeholder="Miqdor ($)"><div class="bt"><button data-a="bx" data-t="'+t+'"'+d+'>Sotib olish</button></div><div class="bt"><button class="s" data-a="s" data-t="'+t+'" data-f="1"'+ds+'>Hammasini sotish</button></div></div>';
+  
+  o+='<div class="card"><div class="mu">Naqd pul: $'+f(S.cash)+'</div>';
+  
+  o+='<div class="bt" style="margin-top:10px;">';
+  o+='<button data-a="buy1" data-t="'+t+'" style="background:var(--purple)"'+d+'>1 dona sotib olish<br><small>($'+f(p)+')</small></button>';
+  o+='</div>';
+  
+  o+='<div class="bt">';
+  o+='<button data-a="buyAll" data-t="'+t+'" style="background:var(--ac)"'+d+'>Hammasini sotib olish<br><small>(Barcha pulingizga)</small></button>';
+  o+='<button data-a="buyHalf" data-t="'+t+'" style="background:var(--blue)"'+d+'>Yarm pulga sotib olish<br><small>('+f(S.cash/2)+' $ ga)</small></button>';
+  o+='</div>';
+  o+='<div class="bt"><button class="s" data-a="s" data-t="'+t+'" data-f="1"'+ds+'>Hammasini sotish</button></div>';
+  o+='</div>';
   return o;
 }
 
 function render(){
-  var T=[["w","💵 Hamyon"],["m","📈 Bozor"],["s","🏭 Do'kon"],["p","💼 Portfel"],["g","🎰 Omad"]];
+  var T=[["w","💵 Hamyon"],["m","📈 Bozor"],["u","⬆️ Upgrade"],["s","🏭 Do'kon"],["p","💼 Portfel"],["g","🎰 Omad"]];
   document.getElementById("tb").innerHTML=T.map(function(x){return'<button data-a="tab" data-t="'+x[0]+'" class="'+(TAB===x[0]&&!DET?"on":"")+'">'+x[1]+'</button>'}).join("");
-  document.getElementById("app").innerHTML=DET?detail(DET):TAB==="w"?wallet():TAB==="m"?market():TAB==="s"?shopView():TAB==="p"?port():TAB==="g"?gambleView():wallet();
+  document.getElementById("app").innerHTML=DET?detail(DET):TAB==="w"?wallet():TAB==="m"?market():TAB==="u"?upgView():TAB==="s"?shopView():TAB==="p"?port():TAB==="g"?gambleView():wallet();
 }
 
-// --- ACCORDION ---
 window.toggleAcc = function(btn) {
   var content = btn.nextElementSibling;
   var isOpen = content.classList.contains('on');
-  // Yopish
   var all = document.querySelectorAll('.acc-content');
   for(var i=0; i<all.length; i++) { all[i].classList.remove('on'); }
   var allBtns = document.querySelectorAll('.acc-btn span');
@@ -694,33 +765,51 @@ window.toggleAcc = function(btn) {
   }
 };
 
-// --- ADMIN FUNKSIYALARI ---
 window.modifyCash = function(uid, dir, inputId) {
   var amt = parseFloat(document.getElementById(inputId).value);
-  if(isNaN(amt) || amt <= 0) return alert("Miqdorni kiriting!");
-  DB.collection("leaderboard").doc(uid).get().then(function(doc){
-    if(doc.exists) {
-      var current = doc.data().cash || 0; var newCash = dir === 1 ? current + amt : Math.max(0, current - amt);
-      DB.collection("leaderboard").doc(uid).update({cash: newCash}).then(function(){ 
-        alert("Muvaffaqiyatli o'zgartirildi!"); 
-        document.getElementById(inputId).value = "";
-      });
-    }
-  });
+  if(isNaN(amt) || amt <= 0) return alert("Miqdorni to'g'ri kiriting!");
+  
+  if (uid === MY_ID) {
+    if (dir === 1) S.cash += amt;
+    else S.cash = Math.max(0, S.cash - amt);
+    save(); render();
+    alert("Muvaffaqiyatli! Sizning pulingiz: $" + f(S.cash));
+  } else {
+    if(!DB) return alert("Baza bilan aloqa yo'q!");
+    DB.collection("leaderboard").doc(uid).get().then(function(doc){
+      if(doc.exists) {
+        var current = doc.data().cash || 0; 
+        var newCash = dir === 1 ? current + amt : Math.max(0, current - amt);
+        DB.collection("leaderboard").doc(uid).update({cash: newCash}).then(function(){ 
+          alert("O'yinchi puli o'zgartirildi!"); 
+          document.getElementById(inputId).value = "";
+        });
+      }
+    });
+  }
 };
 
 window.modifyLuck = function(uid, inputId) {
   var amt = parseInt(document.getElementById(inputId).value);
   if(isNaN(amt) || amt <= 0) return alert("Omad miqdorini kiriting!");
-  DB.collection("leaderboard").doc(uid).get().then(function(doc){
-    if(doc.exists) {
-      var current = doc.data().luck || 0; var newLuck = current + amt;
-      DB.collection("leaderboard").doc(uid).update({luck: newLuck}).then(function(){ 
-        alert("Omad qo'shildi!"); 
-        document.getElementById(inputId).value = "";
-      });
-    }
-  });
+  
+  if (uid === MY_ID) {
+    S.luck += amt;
+    save(); render();
+    alert("Muvaffaqiyatli! Sizning omadingiz: " + S.luck);
+  } else {
+    if(!DB) return alert("Baza bilan aloqa yo'q!");
+    DB.collection("leaderboard").doc(uid).get().then(function(doc){
+      if(doc.exists) {
+        var current = doc.data().luck || 0; 
+        var newLuck = current + amt;
+        DB.collection("leaderboard").doc(uid).update({luck: newLuck}).then(function(){ 
+          alert("O'yinchi omadi o'zgartirildi!"); 
+          document.getElementById(inputId).value = "";
+        });
+      }
+    });
+  }
 };
 
 window.setPrice = function(t, inputId) {
@@ -740,7 +829,6 @@ window.marketEvent = function(mult) {
   alert("Bozor " + (mult > 1 ? "ko'tarildi" : "tushirildi") + "!");
 };
 
-// --- TUGMALAR BOSILGANDA ---
 document.body.addEventListener("click", function(e){
   var btn = e.target.closest("button");
   if(!btn) {
@@ -770,6 +858,83 @@ document.body.addEventListener("click", function(e){
     } else MSG = "❌ Noto'g'ri kod";
     save(); render();
   }
+  else if(a === "buy1") {
+    var p = S.px[t];
+    if(S.cash >= p) {
+      S.cash -= p;
+      if(!S.hold[t]) S.hold[t] = {sh:0, cost:0};
+      S.hold[t].sh += 1;
+      S.hold[t].cost += p;
+      save(); render();
+      alert("🎉 1 dona " + t + " sotib olindi!");
+    } else {
+      alert("❌ Pulingiz yetarli emas!");
+    }
+  }
+  else if(a === "buyAll") {
+    if(S.cash > 0.01) {
+      var cost = S.cash;
+      S.cash = 0;
+      if(!S.hold[t]) S.hold[t] = {sh:0, cost:0};
+      S.hold[t].sh += cost / S.px[t];
+      S.hold[t].cost += cost;
+      save(); render();
+      alert("🎉 Barcha pulingizga " + t + " aksiyasini sotib oldingiz!");
+    } else { alert("❌ Pulingiz yo'q!"); }
+  }
+  else if(a === "buyHalf") {
+    var halfCash = S.cash / 2;
+    if(halfCash > 0.01) {
+      S.cash -= halfCash;
+      if(!S.hold[t]) S.hold[t] = {sh:0, cost:0};
+      S.hold[t].sh += halfCash / S.px[t];
+      S.hold[t].cost += halfCash;
+      save(); render();
+      alert("🎉 Yarm pulingizga " + t + " aksiyasini sotib oldingiz!");
+    } else { alert("❌ Pulingiz yetarli emas!"); }
+  }
+  // YANGI: UPGRADE MANTIQI (Aksiya beradi)
+  else if(a === "doUpgrade") {
+    if(S.hold[t] && S.hold[t].sh >= 2) {
+      btn.disabled = true;
+      btn.innerText = "Aylanmoqda...";
+      
+      setTimeout(function() {
+        // Omad qancha bo'lsa, shuncha foiz yutish (100 luck = 100% kafolat)
+        var winChance = Math.min(S.luck, 100);
+        // Aniq hisoblash: 100 bo'lsa, 100/100 = 1.0. Math.random() hech qachon 1.0 bo'lmaydi, shuning uchun 100 da albatta true bo'ladi.
+        var isWin = Math.random() < (winChance / 100);
+        
+        // 100 ta bo'lsa, 0.000001% xatolik ham bo'lmasligi uchun qo'shimcha tekshiruv
+        if (winChance >= 100) isWin = true; 
+        
+        var nextT = UPGRADE_TREE[t] || "APPL";
+        var nextName = SM[nextT] ? SM[nextT].n : "Noma'lum";
+        
+        if(isWin) {
+          S.hold[t].sh -= 2; // 2 ta o'chadi
+          if(S.hold[t].sh < 0.0001) delete S.hold[t];
+          
+          // Yangi aksiya beriladi
+          if(!S.hold[nextT]) S.hold[nextT] = {sh:0, cost:0};
+          S.hold[nextT].sh += 1;
+          
+          // O'rtacha narxni yangilash
+          S.hold[nextT].cost = S.px[nextT] || 0;
+          
+          alert("🔥 UPGRADE MUVAFFAQIYATLI!\nSiz 2 ta " + t + " evaziga 1 ta " + nextT + " (" + nextName + ") oldingiz!");
+          showConfetti();
+        } else {
+          S.hold[t].sh -= 1; // Muvaffaqiyatsizlikda 1 tasi yo'qoladi
+          if(S.hold[t].sh < 0.0001) delete S.hold[t];
+          alert("😢 UPGRADE MUVAFFAQIYATSIZ! 1 ta " + t + " yo'qoldi.");
+        }
+        save(); render();
+      }, 2000);
+    } else {
+      alert("❌ Kamida 2 ta aksiya kerak!");
+    }
+  }
   else if(a === "buyShop") {
     var itemId = btn.getAttribute("data-id");
     var spawnIdx = btn.getAttribute("data-idx");
@@ -781,7 +946,7 @@ document.body.addEventListener("click", function(e){
       S.shopInv.push({ id: itemId, status: null });
       S.activeSpawns.splice(spawnIdx, 1);
       save(); render();
-      alert("🎉 Sotib olindi! Endi Inventarga kirib, rejimni tanlang.");
+      alert("🎉 Sotib olindi!");
     } else {
       alert("❌ Pulingiz yetarli emas!");
     }
@@ -843,17 +1008,44 @@ document.body.addEventListener("click", function(e){
     }
   }
   else if(a === "repair") {
-    // NaN va buzilgan ma'lumotlarni tozalash
-    if(isNaN(S.cash) || S.cash === null || S.cash === undefined) S.cash = 10;
-    if(isNaN(S.luck) || S.luck === null || S.luck === undefined) S.luck = 0;
-    if(!S.hold) S.hold = {};
-    if(!S.shopInv) S.shopInv = [];
-    if(!S.activeSpawns) S.activeSpawns = JSON.parse(JSON.stringify(DEFAULT_SPAWNS));
-    if(!S.used) S.used = [];
-    for(var key in S.px) { if(isNaN(S.px[key]) || S.px[key] < 0.05) S.px[key] = SM[key] ? SM[key].p : 1; }
-    for(var b in S.hold) { if(isNaN(S.hold[b].sh) || S.hold[b].sh < 0) delete S.hold[b]; }
+    var logs = [];
+    var repaired = 0;
+    
+    if(isNaN(S.cash) || S.cash === null || S.cash === undefined) { logs.push("cash: NaN -> 10 ga o'zgartirildi"); S.cash = 10; repaired++; }
+    if(isNaN(S.luck) || S.luck === null || S.luck === undefined) { logs.push("luck: NaN -> 0 ga o'zgartirildi"); S.luck = 0; repaired++; }
+    if(!S.hold) { logs.push("hold: yo'q edi -> {} yaratildi"); S.hold = {}; repaired++; }
+    if(!S.shopInv) { logs.push("shopInv: yo'q edi -> [] yaratildi"); S.shopInv = []; repaired++; }
+    if(!S.activeSpawns) { logs.push("activeSpawns: yo'q edi -> standart yaratildi"); S.activeSpawns = JSON.parse(JSON.stringify(DEFAULT_SPAWNS)); repaired++; }
+    if(!S.used) { logs.push("used: yo'q edi -> [] yaratildi"); S.used = []; repaired++; }
+    
+    for(var key in S.px) {
+      if(isNaN(S.px[key]) || S.px[key] < 0.05) {
+        var oldVal = S.px[key];
+        S.px[key] = SM[key] ? SM[key].p : 1;
+        logs.push("px['"+key+"']: " + oldVal + " -> " + S.px[key] + " ga o'zgartirildi");
+        repaired++;
+      }
+    }
+    
+    for(var b in S.hold) {
+      if(isNaN(S.hold[b].sh) || S.hold[b].sh < 0) {
+        logs.push("hold['"+b+"']: buzilgan -> o'chirildi");
+        delete S.hold[b];
+        repaired++;
+      }
+    }
+    
+    if(repaired > 0) {
+      REPAIR_LOG = '<div class="repair-report"><b>🔧 Ta\'mirlash hisoboti (' + repaired + ' ta xato):</b>';
+      logs.forEach(function(log) {
+        REPAIR_LOG += '<div class="report-item">✅ ' + log + '</div>';
+      });
+      REPAIR_LOG += '</div>';
+    } else {
+      REPAIR_LOG = '<div class="repair-report"><b>✅ Hammasi joyida! Hech qanday xato topilmadi.</b></div>';
+    }
+    
     save(); render();
-    alert("🔧 Tizim tozalandi va ta'mirlandi!");
   }
   else if(a === "sync") {
     save();
@@ -863,6 +1055,7 @@ document.body.addEventListener("click", function(e){
     if(confirm("DIQQAT! O'yin to'liq nolga tushadi. Davom etilsinmi?")) {
       localStorage.removeItem(K);
       S = fresh();
+      REPAIR_LOG = "";
       save(); render();
       alert("💣 O'yin nolga tushirildi!");
     }
@@ -883,7 +1076,10 @@ document.body.addEventListener("click", function(e){
     isSpinning = true; S.cash -= bet; save(); msgEl.innerText = "Aylanmoqda...";
     var randomDeg = Math.floor(Math.random() * 360) + 1800; wheel.style.transform = "rotate(" + randomDeg + "deg)";
     setTimeout(function() {
-      var winChance = Math.min(S.luck, 100) / 100; var isWin = Math.random() < winChance; 
+      var winChance = Math.min(S.luck, 100) / 100; 
+      var isWin = Math.random() < winChance; 
+      if (S.luck >= 100) isWin = true; // 100% kafolat
+      
       if(isWin) { S.cash += bet * 2; msgEl.innerText = "🎉 YUTDINGIZ! +$" + f(bet * 2); msgEl.style.color = "var(--ac)"; showConfetti(); } 
       else { msgEl.innerText = "😢 Yutqazdingiz! -$" + f(bet); msgEl.style.color = "var(--rd)"; if(S.luck > 0) { S.luck -= 10; if(S.luck < 0) S.luck = 0; } }
       setTimeout(function(){ wheel.style.transition = "none"; wheel.style.transform = "rotate(0deg)"; setTimeout(function(){ wheel.style.transition = "transform 3s cubic-bezier(0.25, 0.1, 0.25, 1)"; isSpinning = false; }, 50); }, 500);
@@ -900,7 +1096,6 @@ document.body.addEventListener("click", function(e){
   }
 });
 
-// --- DOIMIY DAROMAD VA KLAVIATURA HIMOYASI ---
 setInterval(step, 3000);
 setInterval(function() { 
   if(S.shopInv && S.shopInv.length > 0) {
@@ -923,7 +1118,6 @@ setInterval(function() {
   var active = document.activeElement;
   var isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT");
   if(!DET && TAB!=="g" && !isTyping) {
-      // Faqat pul ko'rinishini yangilash (ekran miltillamasligi uchun)
       var cashEl = document.getElementById("live-cash");
       if(cashEl) cashEl.innerText = "$" + f(S.cash);
       var totEl = document.getElementById("live-total");
